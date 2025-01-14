@@ -1,0 +1,352 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+{% load social_share %}
+
+<!-- Chat Vendors CSS -->
+<link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/bootstrap-maxlength/bootstrap-maxlength.css' %}" rel="stylesheet"/>
+<!-- Page CSS -->
+<link href="{% static 'vendor/css/pages/app-chat.css' %}" rel="stylesheet"/>
+
+{% block content %}
+<!-- Sections:Start -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="card g-3 mt-5">
+            <div class="card-body row g-3">
+                <div class="col-lg-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2 gap-1">
+                        <div class="me-1">
+                            <h5 class="mb-1">{{ dataset.name }}</h5>
+                            <p class="mb-1">مالک:
+                                <span class="fw-medium"> {{ dataset.owner}}</span>
+                            </p>
+                        </div>
+                        <div class="d-flex align-items-center ">
+                            <span class="badge bg-label-danger">{{ dataset.tasks }}</span>
+                            <i class="ti ti-share ti-sm mx-4">{% post_to_linkedin dataset.get_absolute_url "linkedin" %}</i>
+                            <i class="ti ti-bookmarks ti-sm"></i>
+                        </div>
+                    </div>
+
+
+                    <div class="accordion mb-2" id="collapsibleSection">
+                        <div class="card accordion-item">
+                                    <h2 class="accordion-header" id="headingDeliveryAddress">
+                                        <button aria-controls="collapseDeliveryAddress" aria-expanded="true" class="accordion-button" data-bs-target="#collapseDeliveryAddress" data-bs-toggle="collapse" type="button"> ثبت درخواست برچسب زنی</button>
+                                    </h2>
+                                    <div class="accordion-collapse collapse show" data-bs-parent="#collapsibleSection" id="collapseDeliveryAddress">
+                                        <div class="accordion-body">
+                                            <form method="POST"  class="source-item pt-4 px-0 px-sm-4">
+                                             {% csrf_token %}
+                                                <div class="row g-3">
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="annotationReq_startRecord">از رکورد</label>
+                                                        <input class="form-control" id="annotationReq_startRecord" name="annotationReq_startRecord" type="number" value="1"/>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="annotationReq_endRecord">تا رکورد</label>
+                                                        <input class="form-control" id="annotationReq_endRecord" id="annotationReq_endRecord" type="number" value="1"/>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="annotationReq_priceType">نوع پرداخت</label>
+                                                         <select class="select2 form-select" data-allow-clear="true" id="annotationReq_priceType" name="annotationReq_priceType">
+                                                            <option label="رایگان" value="Free">رایگان</option>
+                                                            <option label="غیررایگان" value="Pricing" selected>غیررایگان</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="col-md-3">
+                                                        <label class="form-label" for="annotationReq_estimatedPrice">مبلغ پیشنهادی برچسب زنی هر رکورد</label>
+                                                        <input class="form-control" id="annotationReq_estimatedPrice" name="annotationReq_estimatedPrice" type="number" value="0"/>
+                                                    </div>
+                                                    <div class="col-12">
+                                                        <label class="form-label" for="annotationReq_desc">توضیحات</label>
+                                                        <textarea class="form-control" id="annotationReq_desc" name="annotationReq_desc" placeholder="" rows="2"></textarea>
+                                                    </div>
+
+
+
+                                                    <div  class="mb-3" data-repeater-list="group-define-label">
+                                                        <div class="row pb-1">
+                                                            <div class="col-12">
+                                                                <button class="btn btn-success" data-repeater-create type="button">
+                                                                    <i class="ti ti-plus ti-xs me-1"></i>
+                                                                    افزودن برچسب
+                                                                    </button>
+                                                            </div>
+                                                        </div>
+                                                        <div id="div_container_labels" class="repeater-wrapper pt-0 pt-md-1" data-repeater-item>
+                                                            <div class="d-flex border rounded position-relative pe-0">
+                                                                <div class="row w-100 p-3">
+                                                                    <div class="col-md-3 col-12 mb-md-0 mb-3">
+                                                                        <input class="form-control mb-3" id="label_name" name="label_name" min="3" placeholder="عنوان برچسب" type="text"/>
+                                                                    </div>
+                                                                    <div class="col-md-3 col-12 mb-md-0 mb-3">
+                                                                        <input class="form-control mb-3" id="label_value" name="label_value" min="3" placeholder="مقدار برچسب" type="text"/>
+                                                                    </div>
+                                                                    <div class="col-md-6 col-12 mb-md-0 mb-3">
+                                                                        <textarea id="label_desc" name="label_desc" class="form-control" placeholder="توضیحات" rows="1"></textarea>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="d-flex flex-column align-items-center justify-content-between border-start p-2">
+                                                                    <i class="ti ti-x cursor-pointer" data-repeater-delete></i>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="d-grid gap-2 col-lg-6 mx-auto">
+                                                        <button class="btn btn-primary" type="button" onclick="createAnnotationRequest({{ dataset.id }})">ثبت درخواست</button>
+                                                    </div>
+
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                    </div>
+
+                    {% for annotation_request in annotation_requests %}
+                        <div class="card academy-content shadow-none border mb-2">
+                            <div class="card-body">
+
+                                <div class="d-flex justify-content-between flex-sm-row flex-column">
+                                    <div class="card-information">
+                                        <img alt="مستر کارت" class="mb-3 img-fluid" src="../../assets/img/icons/payments/mastercard.png"/>
+                                        <div class="d-flex flex-wrap gap-2 pt-1 mb-2">
+                                            <a class="me-3 d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                <i class="ti ti-table text-warning me-2 ti-xs"></i>
+                                                <span class="fw-medium text-heading">
+                                                    از رکورد:
+                                                    {{ annotation_request.startRecord }}
+                                                </span>
+                                            </a>
+                                            <a class="d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                <i class="ti ti-table-filled text-success me-2 ti-xs"></i>
+                                                <span class="fw-medium text-heading">
+                                                    تا رکورد:
+                                                    {{ annotation_request.endRecord }}
+                                                </span>
+                                            </a>
+                                            <a class="me-3 d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                <i class="ti ti-file-dollar text-warning me-2 ti-xs"></i>
+                                                <span class="fw-medium text-heading">
+                                                    مبلغ پایه هر رکورد:
+                                                        {% if annotation_request.priceType == 'Free' %}
+                                                            رایگان
+                                                        {% elif annotation_request.priceType == 'Pricing' %}
+                                                            {{ annotation_request.estimatedPrice  }}
+                                                        {% endif %}
+                                                </span>
+                                            </a>
+                                            <a class="d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                <i class="ti ti-timeline text-success me-2 ti-xs"></i>
+                                                <span class="fw-medium text-heading">
+                                                        مدت:
+                                                         {% if annotation_request.duration == None %}
+                                                            نامحدود
+                                                        {% else  %}
+                                                            {{ annotation_request.duration }}
+                                                            روز
+                                                        {% endif %}
+                                                </span>
+                                            </a>
+                                        </div>
+
+                                        <small>{{ annotation_request.desc }}</small>
+                                    </div>
+                                    <div class="d-flex flex-column text-start text-lg-end">
+                                        <div class="d-flex order-sm-0 order-1 mt-3">
+                                            <a aria-controls="collapseRequest-{{ annotation_request.id }}" aria-expanded="false" class="btn btn-primary btn-sm me-1" data-bs-toggle="collapse" href="#collapseRequest-{{ annotation_request.id }}" role="button">نمایش پیشنهادات</a>
+                                            {% if annotation_request.annotationStatus  == 'Requested' %}
+                                                <form method="post">
+                                                    {% csrf_token %}
+                                                    <button type="submit" name="btn_annotation_request_cancel" class="btn btn-danger btn-sm">لغو درخواست </button>
+                                                    <input type="hidden"  name="annotation_request_id" value="{{ annotation_request.id }}" />
+                                                </form>
+                                            {% elif annotation_request.annotationStatus  == 'Accepted'%}
+                                                <button class="btn btn-outline-info btn-sm" disabled type="button">پذیرش شده </button>
+                                            {% elif annotation_request.annotationStatus  == 'Completed'%}
+                                                <button class="btn btn-outline-info btn-sm" disabled type="button"> تکمیل شده </button>
+                                            {% elif annotation_request.annotationStatus  == 'Payed'%}
+                                                <button class="btn btn-outline-info btn-sm" disabled type="button">پرداخت شده</button>
+                                            {% elif annotation_request.annotationStatus  == 'Canceled'%}
+                                                <button class="btn btn-outline-info btn-sm" disabled type="button">لغو شده</button>
+                                            {% endif %}
+                                        </div>
+                                        <small class="mt-sm-auto mt-2 order-sm-1 order-0">انقضا: 10/27</small>
+                                    </div>
+                                </div>
+
+
+                                <div class="collapse mb-1" id="collapseRequest-{{ annotation_request.id }}">
+                                    <div class="table-responsive">
+                                        <table class="table table-borderless border-top">
+                                            <thead class="border-bottom">
+                                            <tr>
+                                                <th></th>
+                                                <th>کاربر</th>
+                                                <th>تاریخ پیشنهاد</th>
+                                                <th>وضعیت</th>
+                                                <th> مبلغ پیشنهادی</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for annotation_response in annotation_responses %}
+                                                {% if annotation_response.annotationRequest.id ==  annotation_request.id%}
+                                                <tr>
+                                                <td>
+                                                    <div class="avatar avatar-online">
+                                                        {% if annotation_response.user.profile.image %}
+                                                            <img alt class="h-auto rounded-circle" src="{{ annotation_response.user.profile.image.url }}" />
+                                                        {% else %}
+                                                            <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
+                                                        {% endif %}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex flex-column">
+                                                        <p class="mb-0 fw-medium">
+                                                            <bdi>{{ annotation_response.user.username }}</bdi>
+                                                        </p>
+                                                        <small class="text-muted">{{ annotation_response.user.email }}</small>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="text-muted">{{ annotation_response.responseDate }}</span>
+                                                </td>
+                                                <td>
+                                                     {% if annotation_response.responseType  == 'Request' %}
+                                                        <span class="badge bg-label-primary">درخواست</span>
+                                                    {% elif annotation_response.responseType  == 'Accept' %}
+                                                        <span class="badge bg-label-success">پذیرش شده</span>
+                                                    {% elif annotation_response.responseType  == 'Reject' %}
+                                                        <span class="badge bg-label-danger">لغو شده</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <span class="">{{ annotation_response.suggestedPrice }}</span>
+                                                </td>
+                                                {% if annotation_response.responseType  == 'Request' %}
+                                                <td>
+                                                    <div class="add-btn">
+                                                        <form method="post">
+                                                            {% csrf_token %}
+                                                            <button type="submit" name="btn_annotation_response_accept" class="btn btn-success btn-sm">پذیرش </button>
+                                                            <input type="hidden"  name="annotation_response_id" value="{{ annotation_response.id }}" />
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                                {% endif %}
+                                            </tr>
+                                                {%  endif %}
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    {% endfor %}
+
+
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+<!-- / Sections:End -->
+
+
+
+
+
+
+<!-- define Vendors JS -->
+<script src="{% static 'libs/jdate/jdate.js' %}"></script>
+<script src="{% static 'libs/flatpickr/flatpickr-jalali.js' %}"></script>
+<script src="{% static 'libs/flatpickr/l10n/fa.js' %}"></script>
+<script src="{% static 'vendor/libs/cleavejs/cleave.js' %}"></script>
+<script src="{% static 'vendor/libs/cleavejs/cleave-phone.js' %}"></script>
+<script src="{% static 'vendor/libs/jquery-repeater/jquery-repeater.js' %}"></script>
+<!-- define Page JS -->
+<script src="{% static 'js/offcanvas-send-invoice.js' %}"></script>
+<script src="{% static 'js/app-invoice-add.js' %}"></script>
+
+<!-- Main JS -->
+<script src="{% static 'js/main.js' %}"></script>
+
+<script>
+function generateAnnotationLabelOptions()
+{
+    cols = [];
+    var div_container = document.querySelector('#div_container_labels')
+    var rows = div_container.children;
+    for (let i = 0; i < rows.length; i++) {
+        if(rows[i].style.display != 'none')
+        {
+            var label_name = document.getElementsByName("group-define-label[" + i + "][label_name]")[0].value
+            var label_value = document.getElementsByName("group-define-label[" + i + "][label_value]")[0].value
+            var label_desc = document.getElementsByName("group-define-label[" + i + "][label_desc]")[0].value
+            const col = {'name':label_name, 'value':label_value, 'desc':label_desc};
+            cols.push(col)
+        }
+    }
+    return JSON.stringify(cols);
+}
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== "") {
+        const cookies = document.cookie.split(";");
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          // Does this cookie string begin with the name we want?
+          if (cookie.substring(0, name.length + 1) === (name + "=")) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+
+async function createAnnotationRequest(dataset_id){
+    let annotationReq_startRecord = $('#annotationReq_startRecord').val();
+    let annotationReq_endRecord = $('#annotationReq_endRecord').val();
+    let annotationReq_priceType = $('#annotationReq_priceType').val();
+    let annotationReq_estimatedPrice = $('#annotationReq_estimatedPrice').val();
+    let annotationReq_desc = $('#annotationReq_desc').val();
+
+    let annotationReq_labelOptions = generateAnnotationLabelOptions();
+
+    const url="{% url 'dataset:create_annotation_request' %}"
+    const newAnnotationReq = {
+        annotationReq_dataset_id: dataset_id,
+        annotationReq_startRecord: annotationReq_startRecord,
+        annotationReq_endRecord: annotationReq_endRecord,
+        annotationReq_priceType: annotationReq_priceType,
+        annotationReq_estimatedPrice: annotationReq_estimatedPrice,
+        annotationReq_desc: annotationReq_desc,
+        annotationReq_labelOptions: annotationReq_labelOptions
+    }
+
+    await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        "X-CSRFToken": getCookie("csrftoken"),
+      },
+      body: JSON.stringify({annotationReq: newAnnotationReq })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+    });
+}
+</script>
+{% endblock %}

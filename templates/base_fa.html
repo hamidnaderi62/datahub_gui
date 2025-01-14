@@ -1,0 +1,17 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html class="light-style layout-navbar-fixed layout-wide" data-assets-path="" data-template="front-pages" data-theme="theme-default" dir="rtl" lang="fa">
+<head>
+    {% include "includes/header_references.html" %}
+</head>
+<body>
+  {% include "includes/header_fa.html" %}
+
+  {% block content %}
+  {% endblock %}
+
+  {% include "includes/footer_fa.html" %}
+  {% include "includes/footer_references.html" %}
+</body>
+</html>

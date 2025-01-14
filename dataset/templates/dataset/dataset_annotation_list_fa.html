@@ -1,0 +1,150 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+
+
+{% block content %}
+ <!-- Content -->
+                <div class="container-xxl flex-grow-1 container-p-y">
+                    <h4 class="py-3 mb-4">
+
+                    </h4>
+                    <div class="app-academy">
+                        <div class="card p-0 mb-4">
+                            <div class="card-body d-flex flex-column flex-md-row justify-content-between p-0 pt-4">
+                                <div class="app-academy-md-50 card-body d-flex align-items-md-center flex-column text-md-center">
+
+                                    <form method="get" class="search-form" action="{% url 'dataset:dataset_annotation_list_fa' %}">
+                                        <div class="d-flex align-items-center justify-content-between app-academy-md-80">
+
+                                            <input name="q" class="form-control me-2" placeholder="جستجو کنید ..." type="search"/>
+                                            <button class="btn btn-primary btn-icon" type="submit">
+                                                <i class="ti ti-search"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row gy-4 mb-4">
+                                    {% for annotation_request in annotation_requests %}
+                                        <div class="col-sm-6 col-lg-4">
+                                        <div class="card p-2 h-100 shadow-none border">
+                                            <form method="post">
+                                            {% csrf_token %}
+                                                <div class="card-body p-3 pt-2">
+                                                    <input type="hidden"  name="annotation_request_id" value="{{ annotation_request.id }}" />
+                                                    <input type="hidden"  name="dataset_id" value="{{ annotation_request.dataset.id }}" />
+                                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                                        {% for annotation_tags in annotation_request.tags|safe|make_list  %}
+                                                            <span class="badge bg-label-primary me-1">{{ annotation_tags }}</span>
+                                                        {% endfor %}
+
+                                                    </div>
+                                                    <a href="{% url "dataset:dataset_detail_fa" pk=annotation_request.dataset.id %}">
+                                                        <h5>{{ annotation_request.dataset.name }}</h5>
+                                                    </a>
+                                                    <div class="d-flex flex-wrap gap-2 pt-1 mb-3">
+                                                        <a class="me-3 d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                            <i class="ti ti-table text-warning me-2 ti-xs"></i>
+                                                            <span class="fw-medium text-heading">
+                                                                از رکورد:
+                                                                {{ annotation_request.startRecord }}
+                                                            </span>
+                                                        </a>
+                                                        <a class="d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
+                                                            <i class="ti ti-table-filled text-success me-2 ti-xs"></i>
+                                                            <span class="fw-medium text-heading">
+                                                                تا رکورد:
+                                                                {{ annotation_request.endRecord }}
+                                                            </span>
+                                                        </a>
+                                                    </div>
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <i class="ti ti-clock me-2 mt-n1"></i>
+                                                        تاریخ ثبت:
+                                                        {{ annotation_request.requestDateTime|date:"F j, Y"  }}
+                                                    </div>
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <i class="ti ti-timeline me-2 mt-n1"></i>
+                                                        مدت:
+                                                         {% if annotation_request.duration == None %}
+                                                            نامحدود
+                                                        {% else  %}
+                                                            {{ annotation_request.duration }}
+                                                            روز
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="d-flex align-items-center mb-3">
+                                                        <i class="ti ti-file-dollar me-2 mt-n1"></i>
+                                                        مبلغ پایه هر رکورد:
+                                                        {% if annotation_request.priceType == 'Free' %}
+                                                            رایگان
+                                                        {% elif annotation_request.priceType == 'Pricing' %}
+                                                            {{ annotation_request.estimatedPrice  }}
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="row g-3 mb-2">
+                                                        <small>{{ annotation_request.desc }}</small>
+                                                    </div>
+                                                    <div class="row g-3 mb-2">
+                                                        <div class="col-md-6">
+                                                            <input class="form-control" id="annotationRes_suggestedPrice" name="annotationRes_suggestedPrice" placeholder="قیمت پیشنهادی" type="number" />
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <input class="form-control" id="annotationRes_text" name="annotationRes_text" placeholder="توضیحات" type="text" />
+                                                        </div>
+                                                    </div>
+
+
+
+                                                    <div class="d-grid gap-2 col-lg-9 mx-auto">
+                                                        <button type="submit" name="btn_annotation_request_accept" class="btn btn-primary ">پذیرش درخواست</button>
+                                                    </div>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <nav aria-label="پیمایش صفحه" class="d-flex align-items-center justify-content-center">
+                                    {% if annotation_requests.has_other_pages %}
+                                    <ul class="pagination">
+                                         {% if annotation_requests.has_previous %}
+                                            <li class="page-item prev">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-right ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% for i in annotation_requests.paginator.page_range %}
+                                            {%  if annotation_requests.number == i %}
+                                                <li class="page-item active">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if annotation_requests.has_next %}
+                                            <li class="page-item next">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-left ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--/ Content -->
+
+
+{% endblock %}

@@ -1,0 +1,201 @@
+{% load static %}
+
+<!-- Navbar: Start -->
+<nav class="layout-navbar shadow-none py-0">
+    <div class="container">
+        <div class="navbar navbar-expand-lg landing-navbar px-3 px-md-4">
+            <!-- Menu logo wrapper: Start -->
+            <div class="navbar-brand app-brand demo d-flex py-0 py-lg-2 me-4">
+                <!-- Mobile menu toggle: Start-->
+                <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="ناوبری را تغییر دهید" class="navbar-toggler border-0 px-0 me-2" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                    <i class="ti ti-menu-2 ti-sm align-middle"></i>
+                </button>
+                <!-- Mobile menu toggle: End-->
+                <a class="app-brand-link" href="{% url 'home:home_fa' %}">
+                    <span class="app-brand-logo demo">
+                        <svg fill="none" height="22" viewBox="0 0 32 22" width="32" xmlns="http://www.w3.org/2000/svg">
+                            <path clip-rule="evenodd" d="M0.00172773 0V6.85398C0.00172773 6.85398 -0.133178 9.01207 1.98092 10.8388L13.6912 21.9964L19.7809 21.9181L18.8042 9.88248L16.4951 7.17289L9.23799 0H0.00172773Z" fill="#7367F0" fill-rule="evenodd"/>
+                            <path clip-rule="evenodd" d="M7.69824 16.4364L12.5199 3.23696L16.5541 7.25596L7.69824 16.4364Z" fill="#161616" fill-rule="evenodd" opacity="0.06"/>
+                            <path clip-rule="evenodd" d="M8.07751 15.9175L13.9419 4.63989L16.5849 7.28475L8.07751 15.9175Z" fill="#161616" fill-rule="evenodd" opacity="0.06"/>
+                            <path clip-rule="evenodd" d="M7.77295 16.3566L23.6563 0H32V6.88383C32 6.88383 31.8262 9.17836 30.6591 10.4057L19.7824 22H13.6938L7.77295 16.3566Z" fill="#7367F0" fill-rule="evenodd"/>
+                        </svg>
+                    </span>
+                    <span class="app-brand-text demo menu-text fw-bold ms-2 ps-1">Datahub</span>
+                </a>
+            </div>
+            <!-- Menu logo wrapper: End -->
+        
+        
+            <!-- Menu wrapper: Start -->
+            <div class="collapse navbar-collapse landing-nav-menu" id="navbarSupportedContent">
+                <button aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="ناوبری را تغییر دهید" class="navbar-toggler border-0 text-heading position-absolute end-0 top-0 scaleX-n1-rtl" data-bs-target="#navbarSupportedContent" data-bs-toggle="collapse" type="button">
+                    <i class="ti ti-x ti-sm"></i>
+                </button>
+                
+                {% if request.resolver_match.url_name == "home_fa" %}
+                    <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a aria-current="page" class="nav-link fw-medium" href="home_fa#landingHero">صفحه اصلی</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="home_fa#landingFeatures">دیتاست ها</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="home_fa#landingTeam">تیم ما</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="home_fa#landingFAQ">سوالات متداول</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link fw-medium" href="home_fa#landingContact">ارتباط با ما</a>
+                    </li>
+                </ul>
+                {% else %}
+                    <ul></ul>
+                {% endif %}
+            </div>
+            <div class="landing-menu-overlay d-lg-none"></div>
+            <!-- Menu wrapper: End -->
+            <!-- Toolbar: Start -->
+            <ul class="navbar-nav flex-row align-items-center ms-auto">
+                <!-- Style Switcher -->
+                <!-- / Style Switcher-->
+                <!-- navbar button: Start -->
+            
+                {% if request.user.is_authenticated %}
+                    
+                        <!-- User -->
+                        <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                            <a class="nav-link dropdown-toggle hide-arrow" data-bs-toggle="dropdown" href="javascript:void(0);">
+                                <div class="avatar avatar-online">
+                                    {% if request.user.profile.image %}
+                                        <img alt class="h-auto rounded-circle" src="{{ user.profile.image.url }}" />
+                                    {% else %}
+                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
+                                    {% endif %}
+                                </div>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="pages-account-settings-account.html">
+                                        <div class="d-flex">
+                                            <div class="flex-shrink-0 me-3">
+                                                <div class="avatar avatar-online">
+                                                    {% if request.user.profile.image %}
+                                                        <img alt class="h-auto rounded-circle" src="{{ user.profile.image.url }}" />
+                                                    {% else %}
+                                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <span class="fw-semibold d-block mb-1">{{ request.user.username }}</span>
+                                                <small class="text-muted">{{ request.user.email }}</small>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </li>
+                                <li>
+                                    <div class="dropdown-divider"></div>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'account:profile_account_fa' %}" >
+                                        <i class="ti ti-user-check me-2 ti-sm"></i>
+                                        <span class="align-middle">پروفایل من</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="pages-account-settings-account.html">
+                                    <i class="ti ti-settings me-2 ti-sm"></i>
+                                    <span class="align-middle">تنظیمات</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="pages-account-settings-billing.html">
+                                    <span class="d-flex align-items-center align-middle">
+                                        <i class="flex-shrink-0 ti ti-credit-card me-2 ti-sm"></i>
+                                        <span class="flex-grow-1 align-middle">خریدها</span>
+                                        <span class="flex-shrink-0 badge badge-center rounded-pill bg-label-danger w-px-20 h-px-20">2
+                                        </span>
+                                    </span>
+                                </a>
+                            </li>
+                            <li>
+                                <div class="dropdown-divider"></div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="pages-faq.html">
+                                    <i class="ti ti-help me-2 ti-sm"></i>
+                                    <span class="align-middle">سوالات متداول</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dataset:dataset_define_stepper_fa' %}">
+                                    <i class="ti ti-currency-dollar me-2 ti-sm"></i>
+                                    <span class="align-middle">تعریف دیتاست جدید</span>
+                                </a>
+                            </li>
+                            <li>
+                                <div class="dropdown-divider"></div>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'account:logout_fa' %}" >
+                                    <i class="ti ti-logout me-2 ti-sm"></i>
+                                    <span class="align-middle">خروج از حساب</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    <!--/ User --> 
+                    
+                {% else %}
+                    <li>
+                         <a class="btn btn-primary" href="{% url 'account:login_fa' %}" >
+                            <span class="tf-icons ti ti-login scaleX-n1-rtl me-md-1"></span>
+                            <span class="d-none d-md-block">ورود / ثبت نام</span>
+                        </a>
+                    </li>
+                {% endif %}
+            
+                <!-- Language -->
+                <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
+                    <a class="nav-link dropdown-toggle hide-arrow" data-bs-toggle="dropdown" href="javascript:void(0);">
+                        <i class="ti ti-language rounded-circle ti-md"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li>
+                            <a class="dropdown-item" data-language="fa" data-text-direction="rtl" href="javascript:void(0);">
+                                <span class="align-middle">فارسی</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" data-language="en" data-text-direction="ltr" href="javascript:void(0);">
+                                <span class="align-middle">انگلیسی</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" data-language="fr" data-text-direction="ltr" href="javascript:void(0);">
+                                <span class="align-middle">فرانسوی</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" data-language="ar" data-text-direction="rtl" href="javascript:void(0);">
+                                <span class="align-middle">عربي</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" data-language="de" data-text-direction="ltr" href="javascript:void(0);">
+                                <span class="align-middle">آلمانی</span>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
+                <!--/ Language -->
+            
+                <!-- navbar button: End -->
+            </ul>
+            <!-- Toolbar: End -->
+        </div>
+    </div>
+</nav>
+<!-- Navbar: End -->

@@ -34,24 +34,40 @@
                 
                 {% if request.resolver_match.url_name == "home_fa" %}
                     <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a aria-current="page" class="nav-link fw-medium" href="home_fa#landingHero">صفحه اصلی</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link fw-medium" href="home_fa#landingFeatures">دیتاست ها</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link fw-medium" href="home_fa#landingTeam">تیم ما</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link fw-medium" href="home_fa#landingFAQ">سوالات متداول</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link fw-medium" href="home_fa#landingContact">ارتباط با ما</a>
-                    </li>
-                </ul>
+                        <li class="nav-item">
+                            <a aria-current="page" class="nav-link fw-medium" href="{% url 'home:home_fa' %}">صفحه اصلی</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="home_fa#landingTeam' %}">دیتاست ها</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="home_fa#landingTeam">تیم ما</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="home_fa#landingFAQ">سوالات متداول</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="home_fa#landingContact">ارتباط با ما</a>
+                        </li>
+                    </ul>
                 {% else %}
-                    <ul></ul>
+                    <ul class="navbar-nav me-auto">
+                        <li class="nav-item">
+                            <a aria-current="page" class="nav-link fw-medium" href="{% url 'home:home_fa' %}">صفحه اصلی</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="{% url 'dataset:dataset_list_fa' %}">دیتاست ها</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="{% url 'dataset:dataset_annotation_list_fa' %}">برچسب زنی</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="{% url 'dataset:dataset_define_stepper_fa' %}">تعریف دیتاست</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link fw-medium" href="{% url 'dataset:dataset_load_stepper_fa' %}">بارگزاری دیتاست</a>
+                        </li>
+                    </ul>
                 {% endif %}
             </div>
             <div class="landing-menu-overlay d-lg-none"></div>

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
-    <title>صفحات - ورود | Vuexy - قالب مدیریت بوت استرپ</title>
+    <title>ورود</title>
     <meta content="" name="description"/>
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon' %}"/>
@@ -44,8 +44,8 @@
         <!-- /Left Text -->
         <div class="d-none d-lg-flex col-lg-7 p-0">
             <div class="auth-cover-bg auth-cover-bg-color d-flex justify-content-center align-items-center">
-                <img alt="auth-login-cover" class="img-fluid my-5 auth-illustration" data-app-dark-img="{% static 'illustrations/auth-login-illustration-dark.png' %}" data-app-light-img="{% static 'illustrations/auth-login-illustration-light.png' %}" src="{% static 'img/illustrations/auth-login-illustration-light.png' %}"/>
-                <img alt="auth-login-cover" class="platform-bg" data-app-dark-img="{% static 'illustrations/bg-shape-image-dark.png' %}" data-app-light-img="{% static 'illustrations/bg-shape-image-light.png' %}" src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
+                <img alt="auth-login-cover" class="img-fluid my-5 auth-illustration"  src="{% static 'img/illustrations/auth-login-illustration-light.png' %}"/>
+                <img alt="auth-login-cover" class="platform-bg"  src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
             </div>
         </div>
         <!-- /Left Text -->
@@ -98,7 +98,7 @@
                 </form>
                 <p class="text-center">
                     <span>حساب کاربری ندارید؟</span>
-                    <a href="auth-register-cover.html">
+                    <a href="{% url 'account:register_fa' %}">
                         <span>ثبت نام</span>
                     </a>
                 </p>

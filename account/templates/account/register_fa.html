@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
-    <title>دیتاهاب _ ثبت نام</title>
+    <title>ثبت نام</title>
     <meta content="" name="description"/>
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon' %}"/>
@@ -44,8 +44,8 @@
         <!-- /Left Text -->
         <div class="d-none d-lg-flex col-lg-7 p-0">
             <div class="auth-cover-bg auth-cover-bg-color d-flex justify-content-center align-items-center">
-                <img alt="auth-register-cover" class="img-fluid my-5 auth-illustration" data-app-dark-img="illustrations/auth-register-illustration-dark.png" data-app-light-img="illustrations/auth-register-illustration-light.png" src="../../assets/img/illustrations/auth-register-illustration-light.png"/>
-                <img alt="auth-register-cover" class="platform-bg" data-app-dark-img="illustrations/bg-shape-image-dark.png" data-app-light-img="illustrations/bg-shape-image-light.png" src="../../assets/img/illustrations/bg-shape-image-light.png"/>
+                <img alt="auth-register-cover" class="img-fluid my-5 auth-illustration"  src="{% static 'img/illustrations/auth-register-illustration-light.png' %}"/>
+                <img alt="auth-register-cover" class="platform-bg"  src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
             </div>
         </div>
         <!-- /Left Text -->
@@ -72,11 +72,11 @@
                     <div class="mb-3">
                        {% csrf_token %}
                         <label class="form-label" for="username">نام کاربری</label>
-                        <input autofocus class="form-control" id="username" name="username" placeholder="نام کاربری خود را وارد کنید" type="text"/>
+                        <input autofocus class="form-control" id="username" name="username" placeholder="ایمیل خود را وارد نمایید" type="text"/>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="email">ایمیل</label>
-                        <input class="form-control" id="email" name="email" placeholder="ایمیل خود را وارد کنید" type="text"/>
+                        <input class="form-control" id="email" name="email" placeholder="ایمیل خود را وارد کنید" type="email"/>
                     </div>
                     <div class="mb-3 form-password-toggle">
                         <label class="form-label" for="password1">کلمه عبور</label>
@@ -105,11 +105,11 @@
                             </label>
                         </div>
                     </div>
-                    <<button type="submit" class="btn btn-primary d-grid w-100">ثبت نام</button>
+                    <button type="submit" class="btn btn-primary d-grid w-100">ثبت نام</button>
                 </form>
                 <p class="text-center">
                     <span>در حال حاضر یک حساب کاربری دارید؟</span>
-                    <a href="auth-login-cover.html">
+                    <a href="{% url 'account:login_fa' %}">
                         <span>وارد شوید</span>
                     </a>
                 </p>

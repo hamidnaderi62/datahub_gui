@@ -21,7 +21,7 @@ import datetime
 def dataset_list_fa(request):
     q = request.GET.get('q')
     if q is not None:
-        all_datasets = Dataset.objects.filter(tags__icontains=q).order_by('-id')
+        all_datasets = Dataset.objects.filter(owner__icontains=q).order_by('-id')
     else:
         all_datasets = Dataset.objects.all().order_by('-id')
     page_number = request.GET.get('page')
@@ -60,11 +60,11 @@ def dataset_viewer_fa(request):
     # pf = ParquetFile(os.path.join(settings.MEDIA_ROOT + '/datasets_parq/', 'bike.parq'))
     # df = pf.to_pandas()
 
-    df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
+    #df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
     # html_obj = pyg.walk(df[:10], spec="./chart_meta_0.json", return_html=True)
-    # data = {'Category': ['A','B','C'], 'Value':[10,20,30]}
-    # df = pd.DataFrame(data=data)
-    pygwalker_html = pyg.walk(df[:10], return_html=True)
+    data = {'Category': ['A','B','C'], 'Value':[10,20,30]}
+    df = pd.DataFrame(data=data)
+    pygwalker_html = pyg.walk(df, return_html=True)
     print('*******************************************************')
     print(df[:2])
     print('*******************************************************')
@@ -72,6 +72,11 @@ def dataset_viewer_fa(request):
     #return HttpResponse(pygwalker_html)
     return render(request, 'dataset/dataset_viewer_fa.html', context={'pygwalker_html': pygwalker_html})
 
+
+
+def dataset_viewer_fa1(request):
+    html_obj = MyPygWalkerView()
+    return render(request, 'dataset/dataset_viewer_fa.html', context={'html_obj': html_obj})
 
 
 def dataset_col(request, pk=None):
@@ -137,6 +142,20 @@ def dataset_ner(request):
     return render(request, 'dataset/dataset_ner.html', context={})
 
 
+class MyPygWalkerView(StaticCsvPygWalkerView):
+    csv_file = os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv')
+    template_name = "dataset/dataset_viewer_fa.html"
+
+
+class MyPygWalkerView1(PygWalkerView):
+    queryset = Dataset.objects.all()
+    template_name = "dataset/dataset_viewer_fa.html"
+
+
+class MyPygWalkerView2(PygWalkerView):
+    df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
+    queryset = df[:10]
+    template_name = "dataset/dataset_viewer_fa.html"
 
 
 def dataset_annotation_request_fa(request, pk=None):
@@ -224,19 +243,3 @@ def dataset_annotation_list_fa(request):
 
 def dataset_annotation_record_fa(request, pk=None):
     return render(request, 'dataset/dataset_annotation_record_fa.html', context={})
-
-
-class MyPygWalkerView1(StaticCsvPygWalkerView):
-    csv_file = os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv')
-    template_name = "dataset/dataset_viewer_fa.html"
-
-
-class MyPygWalkerView(PygWalkerView):
-    queryset = Dataset.objects.all()
-    template_name = "dataset/dataset_viewer_fa.html"
-
-
-class MyPygWalkerView2(PygWalkerView):
-    df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
-    queryset = df[:10]
-    template_name = "dataset/dataset_viewer_fa.html"

@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
-    <title> صورتحساب - افزودن | Vuexy - قالب مدیریت بوت استرپ</title>
+    <title>تعریف دیتاست</title>
     <meta content="" name="description"/>
 
     <!-- Favicon -->
@@ -486,14 +486,15 @@ function generateColMetaData()
     }
 
 
+
 async function saveTempMetaData(){
     let dataset_name = $('#dataset_name').val();
     let dataset_owner = $('#dataset_owner').val();
-    let dataset_language = JSON.stringify($('#dataset_language').val());
+    let dataset_language = $('#dataset_language').val().join(',');
     let dataset_license = $('#dataset_license').val();
     let dataset_format = $('#dataset_format').val();
     let dataset_desc = $('#dataset_desc').val();
-    let dataset_tags = JSON.parse($('#dataset_tags').val()).map(item => item.value);
+    let dataset_tags = JSON.parse($('#dataset_tags').val()).map(item => item.value).join(',');
     let dataset_columnDataType = JSON.stringify(cols);
 
 
@@ -537,24 +538,11 @@ function checkTempMetaData() {
 <script>
 loadDatasetTags();
 function loadDatasetTags(){
-     // Email List suggestion
-  //------------------------------------------------------
-  // generate random whitelist items (for the demo)
-  let randomStringsArr = Array.apply(null, Array(100)).map(function () {
-    return (
-      Array.apply(null, Array(~~(Math.random() * 10 + 3)))
-        .map(function () {
-          return String.fromCharCode(Math.random() * (123 - 97) + 97);
-        })
-        //.join('') + '@gmail.com'
-    );
-  });
-
   const dataset_tags_El = document.querySelector('#dataset_tags'),
     dataset_tags = new Tagify(dataset_tags_El, {
       // email address validation (https://stackoverflow.com/a/46181/104380)
       pattern: /^[a-zA-Z0-9]{3,}$/,
-      whitelist: randomStringsArr,
+      whitelist: {{dataset_tags_list| safe}},
       dropdown: {
         position: 'text',
         enabled: 1 // show suggestions dropdown after 1 typed character

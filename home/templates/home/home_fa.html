@@ -23,14 +23,21 @@
                             فرصت استثناییءء
                             <img alt="پیکان انجمن" class="scaleX-n1-rtl" src="{% static 'img/front-pages/icons/Join-community-arrow.png' %}"/>
                         </span>
-                        <a class="btn btn-primary btn-lg" href="#landingPricing">خـرید از مارکئئت راسـتچین</a>
+                        {% if request.user.is_authenticated %}
+                             <a class="btn btn-primary btn-lg" href="{% url 'dataset:dataset_list_fa' %}"> به دنیای ما بپیوندید</a>
+                        {% else %}
+                             <a class="btn btn-primary btn-lg" href="{% url 'account:login_fa' %}"> به دنیای ما بپیوندید</a>
+                        {% endif %}
+
+
+
                     </div>
                 </div>
                 <div class="hero-animation-img" id="heroDashboardAnimation">
                     <a href="../vertical-menu-template/app-ecommerce-dashboard.html" target="_blank">
                         <div class="position-relative hero-dashboard-img" id="heroAnimationImg">
-                            <img alt="داشبورد قهرمان" class="animation-img" data-app-dark-img="{% static 'front-pages/landing-page/hero-dashboard-dark.png' %}" data-app-light-img="{% static 'front-pages/landing-page/hero-dashboard-light.png' %}" src="{% static 'img/front-pages/landing-page/hero-dashboard-light.png' %}"/>
-                            <img alt="عناصر قهرمان" class="position-absolute hero-elements-img animation-img top-0 start-0" data-app-dark-img="{% static 'front-pages/landing-page/hero-elements-dark.png' %}" data-app-light-img="{% static 'front-pages/landing-page/hero-elements-light.png' %}" src="{% static 'img/front-pages/landing-page/hero-elements-light.png' %}"/>
+                            <img alt="داشبورد قهرمان" class="animation-img"  src="{% static 'img/front-pages/landing-page/hero-dashboard-light.png' %}"/>
+                            <img alt="عناصر قهرمان" class="position-absolute hero-elements-img animation-img top-0 start-0"  src="{% static 'img/front-pages/landing-page/hero-elements-light.png' %}"/>
                         </div>
                     </a>
                 </div>
@@ -732,7 +739,7 @@
                     <div class="card border border-label-primary shadow-none">
                         <div class="card-body text-center">
                             <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/laptop.png' %}"/>
-                            <h5 class="h2 mb-1">7.1k+</h5>
+                            <h5 class="h2 mb-1">{{ dataset_count }}</h5>
                             <p class="fw-medium mb-0">دیتاست موجود
                                 <br/>
                             </p>
@@ -743,7 +750,7 @@
                     <div class="card border border-label-success shadow-none">
                         <div class="card-body text-center">
                             <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/user-success.png' %}"/>
-                            <h5 class="h2 mb-1">50k+</h5>
+                            <h5 class="h2 mb-1">{{ user_count }}</h5>
                             <p class="fw-medium mb-0"> کاربر فعال
                                 <br/>
                             </p>
@@ -754,7 +761,7 @@
                     <div class="card border border-label-warning shadow-none">
                         <div class="card-body text-center">
                             <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/check-warning.png' %}"/>
-                            <h5 class="h2 mb-1">100%</h5>
+                            <h5 class="h2 mb-1">{{ request_count }}</h5>
                             <p class="fw-medium mb-0">مبادله انجام شده
                                 <br/>
                             </p>

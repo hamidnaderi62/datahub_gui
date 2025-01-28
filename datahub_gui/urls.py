@@ -10,6 +10,8 @@ urlpatterns = [
     path('account/', include('account.urls', namespace='account')),
     path('dataset/', include('dataset.urls', namespace='dataset')),
 
+    path("pygwalker/", include("djangoaddicts.pygwalker.urls"), ),
+
 
 ]
 

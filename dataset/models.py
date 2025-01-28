@@ -70,14 +70,15 @@ class Comment(models.Model):
         return self.text[:30]
 
 
-class PredefinedTags(models.Model):
+class PredefinedTag(models.Model):
     tag = models.CharField(max_length=2000, blank=True, null=True)
     scope = models.CharField(max_length=2000, blank=True, null=True)
     is_active = models.BooleanField(default=True)
-    Date = models.DateField(auto_now_add=True)
+    created = models.DateField(auto_now_add=True)
 
     def __str__(self):
         return self.tag[:30]
+
 
 class Product(models.Model):
     TYPE = (

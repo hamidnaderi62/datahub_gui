@@ -1,3 +1,5 @@
+let dt_data;
+
 //************************************************
 // Step 2
 // Load csv
@@ -17,7 +19,7 @@ function read_csv_big(my_file) {
         header: true,
         worker: true,
         complete: function(results) {
-            var dt_data = results.data
+            dt_data = results.data
             console.log(dt_data);
             json_datatable(dt_data);
         }
@@ -100,7 +102,8 @@ function createMetaDataRows(adColumns){
                                                 <option value="NER">NER</option>
                                             </select>
                                         </div>
-
+                                        
+                                        
                                     </div>
                                     <div class="d-flex flex-column align-items-center justify-content-between border-start p-2">
                                         <i class="ti ti-x cursor-pointer" data-repeater-delete></i>
@@ -156,7 +159,9 @@ function generateColMetaData()
             var dtype = document.getElementsByName("group-a[" + i + "][col_dtype]")[0].value
             var desc = document.getElementsByName("group-a[" + i + "][col_desc]")[0].value
             var di_type = document.getElementsByName("group-a[" + i + "][col_di_type]")[0].value
-            const col = {'name':name, 'dtype':dtype, 'desc':desc, 'di_type':di_type};
+            //var di_status = '<img alt="User" class="rounded-circle" src="{% static \'svg/flags/fr.svg" width="32">'
+            var di_status = '<button class="btn btn-primary" type="button">کمنام سازی</button>'
+            const col = {'name':name, 'dtype':dtype, 'desc':desc, 'di_type':di_type, 'di_status':di_status};
             cols.push(col)
         }
     }
@@ -168,7 +173,8 @@ function generateColMetaData()
             { data: 'name' },
             { data: 'dtype' },
             { data: 'desc' },
-            { data: 'di_type' }
+            { data: 'di_type' },
+            { data: 'di_status' }
             ]
         } );
 }
@@ -179,7 +185,8 @@ $('#tb_metadata').DataTable( {
         { data: 'name' },
         { data: 'dtype' },
         { data: 'desc' },
-        { data: 'di_type' }
+        { data: 'di_type' },
+        { data: 'di_status' }
         ],
     layout: {
         topStart: {
@@ -203,6 +210,189 @@ $('#tb_metadata').DataTable( {
     },
     select: true
 });
+
+//**************************************************
+// De Identification
+//**************************************************
+
+function de_identification_dataset(){
+    let input_dataset = dt_data;
+    let output_dataset = '';
+    console.log('de_identification');
+    for (let i = 0; i < cols.length; i++) {
+         if(cols[i]['di_type'] == 'Mean'){
+            input_dataset = replaceAllWithMean(input_dataset, cols[i]['name'])
+         }
+         else if(cols[i]['di_type'] == 'Median'){
+            input_dataset = replaceAllWithMedian(input_dataset, cols[i]['name'])
+         }
+         else if(cols[i]['di_type'] == 'Min'){
+            input_dataset = replaceAllWithMin(input_dataset, cols[i]['name'])
+         }
+         else if(cols[i]['di_type'] == 'Max'){
+            input_dataset = replaceAllWithMax(input_dataset, cols[i]['name'])
+         }
+         else if(cols[i]['di_type'] == 'NER'){
+            input_dataset = replaceAllWithNER(input_dataset, cols[i]['name'])
+         }
+     }
+    output_dataset = input_dataset;
+    console.log(output_dataset);
+    //console.log(anonymizeJson(dt_data));
+}
+
+
+//**************************************************
+
+
+function replaceAllWithNER(data, column) {
+    return data.map(item => ({
+        ...item,
+        [column]: anonymizeEmail(item)
+    }));
+}
+
+//**************************************************
+function calculateMean(data, column) {
+    const sum = data.reduce((acc, item) => acc + item[column], 0);
+    return sum / data.length;
+}
+
+function replaceAllWithMean(data, column) {
+    const meanValue = calculateMean(data, column);
+
+    return data.map(item => ({
+        ...item,
+        [column]: meanValue
+    }));
+}
+
+
+//**************************************************
+function calculateMedian(data, column) {
+    const sortedValues = data.map(item => item[column]).sort((a, b) => a - b);
+    const middle = Math.floor(sortedValues.length / 2);
+
+    if (sortedValues.length % 2 === 0) {
+        return (sortedValues[middle - 1] + sortedValues[middle]) / 2;
+    } else {
+        return sortedValues[middle];
+    }
+}
+
+function replaceAllWithMedian(data, column) {
+    const medianValue = calculateMedian(data, column);
+
+    return data.map(item => ({
+        ...item,
+        [column]: medianValue
+    }));
+}
+
+//**************************************************
+function calculateMin(data, column) {
+    return Math.min(...data.map(item => item[column]));
+}
+
+function replaceAllWithMin(data, column) {
+    const minValue = calculateMin(data, column);
+
+    return data.map(item => ({
+        ...item,
+        [column]: minValue
+    }));
+}
+
+//**************************************************
+function calculateMax(data, column) {
+    return Math.max(...data.map(item => item[column]));
+}
+
+function replaceAllWithMax(data, column) {
+    const maxValue = calculateMax(data, column);
+
+    return data.map(item => ({
+        ...item,
+        [column]: maxValue
+    }));
+}
+
+//**************************************************
+// NER Anonymize
+
+function anonymizeJson(data) {
+    if (typeof data === "object" && data !== null) {
+        if (Array.isArray(data)) {
+            return data.map(anonymizeJson); // Process array elements
+        } else {
+            let anonymizedObj = {};
+            for (let key in data) {
+                anonymizedObj[key] = anonymizeValue(key, data[key]);
+            }
+            return anonymizedObj;
+        }
+    }
+    return data;
+}
+
+function anonymizeValue(key, value) {
+        value = anonymizeEmail(value);
+        value = anonymizePhone(value);
+        //value = anonymizeCard(value);
+        //value = anonymizeIP(value);
+        //value = anonymizeSSN(value);
+        //value = anonymizeName(value);
+        //value = anonymizeAddress(value);
+    return value;
+}
+
+function anonymizeValue_old(key, value) {
+    console.log(typeof value)
+    if (typeof value === "string") {
+        // Apply different anonymization rules based on key names
+        if (/email/i.test(key)) return anonymizeEmail(value);
+        if (/phone|mobile/i.test(key)) return anonymizePhone(value);
+        if (/card|credit/i.test(key)) return anonymizeCard(value);
+        if (/ip/i.test(key)) return anonymizeIP(value);
+        if (/ssn/i.test(key)) return anonymizeSSN(value);
+        if (/name/i.test(key)) return anonymizeName(value);
+        if (/address/i.test(key)) return anonymizeAddress(value);
+    } else if (typeof value === "object") {
+        return anonymizeJson(value); // Recursive anonymization for nested objects
+    }
+    return value;
+}
+
+// **Anonymization Helper Functions**
+function anonymizeEmail(email) {
+    return email.replace(/^(.)(.*)(@.*)$/, (match, first, middle, domain) =>
+        first + "*".repeat(middle.length) + domain
+    );
+}
+
+function anonymizePhone(phone) {
+    return phone.replace(/\d(?=\d{4})/g, "*");
+}
+
+function anonymizeCard(cardNumber) {
+    return cardNumber.replace(/\d(?=\d{4})/g, "*");
+}
+
+function anonymizeIP(ip) {
+    return ip.replace(/(\d+\.\d+\.\d+)\.\d+/, "$1.***");
+}
+
+function anonymizeSSN(ssn) {
+    return ssn.replace(/\d(?=\d{4})/g, "*");
+}
+
+function anonymizeName(name) {
+    return name.replace(/\b(\w)\w+/g, "$1.");
+}
+
+function anonymizeAddress(address) {
+    return address.replace(/^(\d+)\s+(.+)$/, "$1 *****");
+}
 
 
 //************************************************

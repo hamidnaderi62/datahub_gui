@@ -16,12 +16,14 @@ from djangoaddicts.pygwalker.views import StaticCsvPygWalkerView
 from djangoaddicts.pygwalker.views import PygWalkerView
 import json
 import datetime
+from taggit.models import Tag
+from django.db.models import Count
 
 
 def dataset_list_fa(request):
     q = request.GET.get('q')
     if q is not None:
-        all_datasets = Dataset.objects.filter(tags__icontains=q).order_by('-id')
+        all_datasets = Dataset.objects.filter(dataset_tags__icontains=q).order_by('-id')
     else:
         all_datasets = Dataset.objects.all().order_by('-id')
     page_number = request.GET.get('page')
@@ -32,6 +34,10 @@ def dataset_list_fa(request):
 
 def dataset_detail_fa(request, pk=None):
     dataset = get_object_or_404(Dataset, id=pk)
+    tags = dataset.tags.all()
+    similar_datasets = Dataset.objects.filter(tags__in=tags).exclude(id=dataset.id).distinct()
+    similar_datasets = similar_datasets.annotate(num_common_tags=Count('tags')).order_by('-num_common_tags')[:3]
+    print(similar_datasets)
 
     if request.method == "POST" and 'submit_dataset_comment' in request.POST:
         text = request.POST.get('text')
@@ -45,9 +51,9 @@ def dataset_detail_fa(request, pk=None):
         df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
         html_obj = pyg.walk(df[:10], return_html=True)
         print(df[:2])
-        return render(request, 'dataset/dataset_detail_fa.html', context={'dataset': dataset, 'html_obj': html_obj})
+        return render(request, 'dataset/dataset_detail_fa.html', context={'dataset': dataset,'similar_datasets': similar_datasets, 'html_obj': html_obj})
 
-    return render(request, 'dataset/dataset_detail_fa.html', context={'dataset': dataset})
+    return render(request, 'dataset/dataset_detail_fa.html', context={'dataset': dataset, 'similar_datasets': similar_datasets})
 
 
 def get_absolute_url(self, dataset):
@@ -119,17 +125,22 @@ def saveTempMetaData(request):
             dataset_tags = dataset['dataset_tags']
             dataset_columnDataType = dataset['dataset_columnDataType']
 
-            Dataset.objects.create(user=request.user
+            new_dataset = Dataset.objects.create(user=request.user
                                    , name=dataset_name
                                    , owner=dataset_owner
                                    , language=dataset_language
                                    , license=dataset_license
                                    , format=dataset_format
                                    , desc=dataset_desc
-                                   , tags=dataset_tags
+                                   , dataset_tags=dataset_tags
+                                   #, tags=dataset_tags
                                    , columnDataType=dataset_columnDataType
                                    , datasetDate=datetime.datetime.now()
                                    )
+            # input_tags = ",".join(f"'{item.strip()}'" for item in dataset_tags.split(","))
+            input_tags = dataset_tags.split(",")
+            print(input_tags)
+            new_dataset.tags.set(input_tags)
         return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
 
 
@@ -182,7 +193,7 @@ def create_annotation_request(request):
                                    , totalRecords=annotationReq_totalRecords
                                    , priceType=annotationReq_priceType
                                    , estimatedPrice=annotationReq_estimatedPrice
-                                   , tags=dataset.tags
+                                   , tags=dataset.dataset_tags
                                    , desc=annotationReq_desc
                                    , labelOptions=annotationReq_labelOptions
                                    , requestDateTime=datetime.datetime.now()

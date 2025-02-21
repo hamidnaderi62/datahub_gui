@@ -1,5 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
+from taggit.managers import TaggableManager
 
 
 
@@ -53,7 +54,8 @@ class Dataset(models.Model):
     createType = models.CharField(max_length=50, choices=CREATE_TYPE, default='Create', blank=True, null=True)
     datasetRate = models.FloatField(blank=True, null=True)
     dataType = models.CharField(max_length=50, choices=DATA_TYPE, default='Text', blank=True, null=True)
-    tags = models.TextField(blank=True, null=True)
+    dataset_tags = models.TextField(blank=True, null=True)
+    tags = TaggableManager()
     created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

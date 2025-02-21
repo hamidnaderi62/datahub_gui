@@ -20,4 +20,9 @@ email:naderi@gmail.com
 pass:Hamid@1362
 
 
+git add .
+git commit -m ""
+# git remote add datahub_gui https://github.com/hamidnaderi62/datahub_gui.git
+git push datahub_gui main
+
 file:///D:/Software/vuexy/129547-main-10.0.0.3/bootstrap%205/Farsi/theme-fa/vuexy-bootstrap-html-admin-template/html/horizontal-menu-template-no-customizer/ui-pagination-breadcrumbs.html

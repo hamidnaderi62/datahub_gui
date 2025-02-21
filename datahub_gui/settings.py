@@ -33,7 +33,8 @@ INSTALLED_APPS = [
     'account.apps.AccountConfig',
     'dataset.apps.DatasetConfig',
     'djangoaddicts.pygwalker',
-    'django_social_share'
+    'django_social_share',
+    'taggit'
 ]
 
 MIDDLEWARE = [

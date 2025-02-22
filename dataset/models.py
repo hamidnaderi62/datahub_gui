@@ -86,7 +86,8 @@ class Product(models.Model):
     TYPE = (
         ('Paper', 'Paper'),
         ('Model', 'Model'),
-        ('Service', 'Service')
+        ('Service', 'Service'),
+        ('Code', 'Code')
     )
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="products")
     title = models.CharField(max_length=1000, blank=True, null=True)

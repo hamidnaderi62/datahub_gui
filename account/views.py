@@ -8,6 +8,7 @@ from dataset.models import Dataset, Comment, Request
 from django.core.paginator import Paginator
 from datetime import datetime
 
+
 def user_login_fa(request):
     if request.user.is_authenticated:
         return redirect('home:home_fa')
@@ -49,9 +50,6 @@ def user_register_fa(request):
         return redirect('home:home_fa')
     return render(request, 'account/register_fa.html', context)
 
-#@login_required
-def change_profile_fa(request):
-    return render(request, 'account/profile_account_fa.html', context)
 
 @login_required
 def profile_account_fa(request):
@@ -63,8 +61,14 @@ def profile_account_fa(request):
             address = request.POST.get('address')
             site = request.POST.get('site')
             bio = request.POST.get('bio')
-            #profile_tags = request.POST.get('profile_tags')
-            Profile.objects.filter(user=request.user).update(name=name, phone=phone, address=address, site=site, bio=bio)
+            # profile_tags = request.POST.get('profile_tags')
+            Profile.objects.filter(user=request.user).update(name=name, phone=phone, address=address, site=site,
+                                                             bio=bio)
+            if request.FILES.get('image'):
+                image = request.FILES.get('image')
+                profile = request.user.profile
+                profile.image = image
+                profile.save()
             return render(request, 'account/profile_account_fa.html', context)
 
         elif 'btn_change_password' in request.POST:

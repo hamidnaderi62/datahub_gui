@@ -100,14 +100,12 @@
                                 </li>
                             </ul>
                             <!-- Change Profile -->
-                            <form method="post">
-                                {% csrf_token %}
-                                <div class="card mb-4">
+                            <div class="card mb-4">
                                 <h5 class="card-header">جزئیات پروفایل</h5>
                                 <!-- Account -->
                                 <div class="card-body">
                                     <div class="d-flex align-items-start align-items-sm-center gap-4">
-                                        {% if request.user.profile.image %}
+                                         {% if request.user.profile.image %}
                                             <img alt="کاربر-آواتار" class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" src="{{ user.profile.image.url }}"/>
                                         {% else %}
                                             <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/14.png' %}"/>
@@ -117,7 +115,7 @@
                                             <label class="btn btn-primary me-2 mb-3" for="upload" tabindex="0">
                                                 <span class="d-none d-sm-block">آپلود عکس جدید</span>
                                                 <i class="ti ti-upload d-block d-sm-none"></i>
-                                                <input accept="image/png, image/jpeg" class="account-file-input" hidden id="upload" name="image" type="file"/>
+                                                <input accept="image/png, image/jpeg" class="account-file-input" hidden id="upload" type="file"/>
                                             </label>
                                             <button class="btn btn-label-secondary account-image-reset mb-3" type="button">
                                                 <i class="ti ti-refresh-dot d-block d-sm-none"></i>
@@ -129,35 +127,122 @@
                                 </div>
                                 <hr class="my-0"/>
                                 <div class="card-body">
+                                    <form id="formAccountSettings" method="post" >
                                         <div class="row">
                                             <div class="mb-3 col-md-6">
-                                                <label class="form-label" for="name">نام/ عنوان </label>
-                                                <input autofocus class="form-control" id="name" name="name" type="text" value="{{ user.profile.name }}"/>
+                                                <label class="form-label" for="firstName">نام کوچک</label>
+                                                <input autofocus class="form-control" id="firstName" name="firstName" type="text" value="نـوید"/>
                                             </div>
                                             <div class="mb-3 col-md-6">
-                                                <label class="form-label" for="phone"> تلفن</label>
+                                                <label class="form-label" for="lastName">نام خانوادگی</label>
+                                                <input class="form-control" id="lastName" name="lastName" type="text" value="محمدزاده"/>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="email">ایمیل</label>
+                                                <input class="form-control" id="email" name="email" placeholder="john.doe@example.com" type="text" value="john.doe@example.com"/>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="organization">سازمان</label>
+                                                <input class="form-control" id="organization" name="organization" type="text" value="راستچین"/>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="phoneNumber">شماره تلفن</label>
                                                 <div class="input-group input-group-merge">
-                                                    <input class="form-control ltr" id="phone" name="phone"  type="text" value="{{ user.profile.phone }}"/>
+                                                    <input class="form-control ltr" id="phoneNumber" name="phoneNumber" placeholder="910 000 0000" type="text"/>
                                                     <span class="input-group-text">IR (+98)</span>
                                                 </div>
                                             </div>
-                                            <div class="mb-3 col-md-12">
-                                                <label class="form-label" for="site">وبسایت</label>
-                                                <input class="form-control" id="site" name="site"  type="text" value="{{ user.profile.site }}"/>
-                                            </div>
-                                            <div class="mb-3 col-md-12">
+                                            <div class="mb-3 col-md-6">
                                                 <label class="form-label" for="address">آدرس</label>
-                                                <input class="form-control" id="address" name="address" type="text" value="{{ user.profile.address }}"/>
+                                                <input class="form-control" id="address" name="address" placeholder="ایران ، تهران ..." type="text"/>
                                             </div>
-                                            <div class="mb-3 col-md-12">
-                                                <label class="form-label" for="bio">بیو</label>
-                                                <input class="form-control" id="bio" name="bio" type="text" value="{{ user.profile.bio }}"/>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="state">استان</label>
+                                                <input class="form-control" id="state" name="state" placeholder="تهران" type="text"/>
                                             </div>
-
-
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="zipCode">کد پستی</label>
+                                                <input class="form-control" id="zipCode" maxlength="6" name="zipCode" placeholder="231465" type="text"/>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="country">کشور</label>
+                                                <select class="select2 form-select" id="country">
+                                                    <option value="">انتخاب کنید</option>
+                                                    <option value="Australia">استرالیا</option>
+                                                    <option value="Bangladesh">بنگلادش</option>
+                                                    <option value="Belarus">بلاروس</option>
+                                                    <option value="Brazil">برزیل</option>
+                                                    <option value="Canada">کانادا</option>
+                                                    <option value="China">چین</option>
+                                                    <option value="France">فرانسه</option>
+                                                    <option value="Germany">آلمان</option>
+                                                    <option value="India">هندوستان</option>
+                                                    <option value="Indonesia">اندونزی</option>
+                                                    <option value="Israel">اسرائيل</option>
+                                                    <option value="Italy">ایتالیا</option>
+                                                    <option value="Japan">ژاپن</option>
+                                                    <option value="Korea">جمهوری کره</option>
+                                                    <option value="Mexico">مکزیک</option>
+                                                    <option value="Philippines">فیلیپین</option>
+                                                    <option value="Russia">فدراسیون روسیه</option>
+                                                    <option value="South Africa">آفریقای جنوبی</option>
+                                                    <option value="Thailand">تایلند</option>
+                                                    <option value="Turkey">ترکیه</option>
+                                                    <option value="Ukraine">اوکراین</option>
+                                                    <option value="United Arab Emirates">امارات متحده عربی</option>
+                                                    <option value="United Kingdom">انگلستان</option>
+                                                    <option value="United States">ایالات متحده</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="language">زبان</label>
+                                                <select class="select2 form-select" id="language">
+                                                    <option value="">زبان را انتخاب کنید</option>
+                                                    <option value="en">انگلیسی</option>
+                                                    <option value="fr">فرانسوی</option>
+                                                    <option value="de">آلمانی</option>
+                                                    <option value="pt">پرتغالی</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="timeZones">منطقه زمانی</label>
+                                                <select class="select2 form-select" id="timeZones">
+                                                    <option value="">منطقه زمانی را انتخاب کنید</option>
+                                                    <option value="-12">(GMT-12:00) خط تاریخ بین المللی غرب</option>
+                                                    <option value="-11">(GMT-11:00) جزیره میدوی، ساموآ</option>
+                                                    <option value="-10">(GMT-10:00) هاوایی</option>
+                                                    <option value="-9">(GMT-09:00) آلاسکا</option>
+                                                    <option value="-8">(GMT-08:00) به وقت اقیانوس آرام (ایالات متحده و کانادا)</option>
+                                                    <option value="-8">(GMT-08:00) تیجوانا، باخا کالیفرنیا</option>
+                                                    <option value="-7">(GMT-07:00) آریزونا</option>
+                                                    <option value="-7">(GMT-07:00) چیهواهوا، لاپاز، مازاتلان</option>
+                                                    <option value="-7">(GMT-07:00) به وقت کوهستان (ایالات متحده و کانادا)</option>
+                                                    <option value="-6">(GMT-06:00) آمریکای مرکزی</option>
+                                                    <option value="-6">(GMT-06:00) به وقت مرکزی (ایالات متحده و کانادا)</option>
+                                                    <option value="-6">(GMT-06:00) گوادالاخارا، مکزیکو سیتی، مونتری</option>
+                                                    <option value="-6">(GMT-06:00) ساسکاچوان</option>
+                                                    <option value="-5">(GMT-05:00) بوگوتا، لیما، کیتو، ریو برانکو</option>
+                                                    <option value="-5">(GMT-05:00) به وقت شرقی (ایالات متحده و کانادا)</option>
+                                                    <option value="-5">(GMT-05:00) ایندیانا (شرق)</option>
+                                                    <option value="-4">(GMT-04:00) به وقت اقیانوس اطلس (کانادا)</option>
+                                                    <option value="-4">(GMT-04:00) کاراکاس، لاپاز</option>
+                                                </select>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="currency">واحد پول</label>
+                                                <select class="select2 form-select" id="currency">
+                                                    <option value="">واحد پول را انتخاب کنید</option>
+                                                    <option value="usd">USD</option>
+                                                    <option value="euro">یورو</option>
+                                                    <option value="pound">پوند</option>
+                                                    <option value="bitcoin">بیت کوین</option>
+                                                    <option value="IRT">ءتء</option>
+                                                    <option value="IRR">ءرء</option>
+                                                </select>
+                                            </div>
                                         </div>
                                         <div class="mt-2">
-                                            <button class="btn btn-primary me-2" name="btn_change_profile" type="submit">ذخیره تغییرات</button>
+                                            <button class="btn btn-primary me-2" type="submit">ذخیره تغییرات</button>
                                             <button class="btn btn-label-secondary" type="reset">لغو</button>
                                         </div>
                                     </form>
@@ -172,6 +257,7 @@
                                 <div class="card-body">
                                     <form method="post" >
                                         {% csrf_token %}
+                                        <input type="hidden"  name="user_id" value="{{ request.user.id }}" />
                                         <div class="row">
                                             <div class="mb-3 col-md-6 form-password-toggle">
                                                 <label class="form-label" for="currentPassword">رمز عبور فعلی</label>

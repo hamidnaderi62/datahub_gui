@@ -198,21 +198,21 @@
                                     </span>
                                 </button>
                             </div>
-                            {% for product_paper in dataset.products.all %}
-                                {% if product_paper.type == 'Paper' %}
+                            {% for product in dataset.products.all %}
+                                {% if product.type == 'Paper' %}
                                     <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter1">
                                         <div class="accordion-body py-3 border-top">
                                             <div class="form-check d-flex align-items-center mb-3">
                                               <div class="flex-shrink-0 avatar">
-                                                {% if product_paper.image %}
-                                                    <img src="{{ product_paper.image.url }}" alt="demo" >
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" alt="demo" >
                                                 {% else %}
                                                     <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
                                                 {% endif %}
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <span class="mb-0 h6">{{ product_paper.title }}</span>
-                                                    <span class="text-muted d-block">{{ product_paper.productDate }}</span>
+                                                  <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
+                                                  <span class="text-muted d-block">{{ product.productDate }}</span>
                                               </label>
                                             </div>
                                         </div>
@@ -228,21 +228,21 @@
                                     </span>
                                 </button>
                             </div>
-                            {% for product_model in dataset.products.all %}
-                                {% if product_model.type == 'Model' %}
+                            {% for product in dataset.products.all %}
+                                {% if product.type == 'Model' %}
                                     <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter2">
                                         <div class="accordion-body py-3 border-top">
                                             <div class="form-check d-flex align-items-center mb-3">
                                               <div class="flex-shrink-0 avatar">
-                                                 {% if product_model.image %}
-                                                    <img src="{{ product_model.image.url }}" alt="demo" >
+                                                 {% if product.image %}
+                                                    <img src="{{ product.image.url }}" alt="demo" >
                                                 {% else %}
                                                     <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
                                                 {% endif %}
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <span class="mb-0 h6">{{ product_model.title }}</span>
-                                                    <span class="text-muted d-block">{{ product_model.productDate }}</span>
+                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
+                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
                                               </label>
                                             </div>
                                         </div>
@@ -251,28 +251,58 @@
                             {% endfor %}
                         </div>
                         <div class="accordion-item  mb-0">
-                            <div class="accordion-header" id="product_model">
+                            <div class="accordion-header" id="product_service">
                                 <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter3" data-bs-toggle="collapse" type="button">
                                     <span class="d-flex flex-column">
                                         <span class="h5 mb-1">سرویس ها</span>
                                     </span>
                                 </button>
                             </div>
-                            {% for product_service in dataset.products.all %}
-                                {% if product_service.type == 'Service' %}
+                            {% for product in dataset.products.all %}
+                                {% if product.type == 'Service' %}
                                     <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter3">
                                         <div class="accordion-body py-3 border-top">
                                             <div class="form-check d-flex align-items-center mb-3">
                                               <div class="flex-shrink-0 avatar">
-                                                 {% if product_service.image %}
-                                                    <img src="{{ product_service.image.url }}" alt="demo" >
+                                                 {% if product.image %}
+                                                    <img src="{{ product.image.url }}" alt="demo" >
                                                 {% else %}
                                                     <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
                                                 {% endif %}
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <span class="mb-0 h6">{{ product_service.title }}</span>
-                                                    <span class="text-muted d-block">{{ product_service.productDate }}</span>
+                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
+                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
+                                              </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="accordion-item  mb-0">
+                            <div class="accordion-header" id="product_source">
+                                <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter4" data-bs-toggle="collapse" type="button">
+                                    <span class="d-flex flex-column">
+                                        <span class="h5 mb-1">سورس کد</span>
+                                    </span>
+                                </button>
+                            </div>
+                            {% for product in dataset.products.all %}
+                                {% if product.type == 'Service' %}
+                                    <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter4">
+                                        <div class="accordion-body py-3 border-top">
+                                            <div class="form-check d-flex align-items-center mb-3">
+                                              <div class="flex-shrink-0 avatar">
+                                                 {% if product.image %}
+                                                    <img src="{{ product.image.url }}" alt="demo" >
+                                                {% else %}
+                                                    <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
+                                                {% endif %}
+                                              </div>
+                                              <label class="form-check-label ms-3" for="defaultCheck1">
+                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
+                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
                                               </label>
                                             </div>
                                         </div>

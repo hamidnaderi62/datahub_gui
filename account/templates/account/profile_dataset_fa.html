@@ -99,6 +99,12 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
+                                    <a class="nav-link"  href="{% url 'account:profile_product_fa' %}">
+                                        <i class="ti-xs ti ti-lock me-1"></i>
+                                        محصولات من
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a class="nav-link"  href="{% url 'account:profile_marketplace_fa' %}">
                                         <i class="ti-xs ti ti-lock me-1"></i>
                                         بازار داده
@@ -112,9 +118,6 @@
                                 <ul class="nav nav-tabs" role="tablist">
                                      <li class="nav-item">
                                         <button aria-controls="navs-top-messages" aria-selected="true" class="nav-link active" data-bs-target="#navs-top-my_datasets" data-bs-toggle="tab" role="tab" type="button"> دیتاستهای من</button>
-                                    </li>
-                                    <li class="nav-item">
-                                        <button aria-controls="navs-top-home" aria-selected="false" class="nav-link" data-bs-target="#navs-top-products" data-bs-toggle="tab" role="tab" type="button"> محصولات من</button>
                                     </li>
                                 </ul>
                                 <div class="tab-content">
@@ -178,152 +181,6 @@
                                         </section>
                                         <!-- Fun facts: End -->
                                     </div>
-                                    <div class="tab-pane fade" id="navs-top-products" role="tabpanel">
-                                         <!-- my products list -->
-                                            <div class="container-xxl flex-grow-1 container-p-y">
-                                                <!-- product cards -->
-                                                <div class="row g-4">
-                                                    {% for dataset in my_datasets %}
-                                                        <div class="col-xl-4 col-lg-6 col-md-6">
-                                                        <div class="card">
-                                                            <div class="card-body">
-                                                                <div class="d-flex justify-content-between">
-                                                                    <h6 class="fw-normal mb-2"> 4 نفر</h6>
-                                                                </div>
-                                                                <div class="d-flex justify-content-between align-items-end mt-1">
-                                                                    <div class="role-heading">
-                                                                        <h4 class="mb-1">مدیر</h4>
-                                                                        <a class="role-edit-modal" data-bs-target="#addRoleModal" data-bs-toggle="modal" href="javascript:">
-                                                                            <span>ویرایش نقش</span>
-                                                                        </a>
-                                                                    </div>
-                                                                    <a class="text-muted" href="javascript:void(0);">
-                                                                        <i class="ti ti-copy ti-md"></i>
-                                                                    </a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {% endfor %}
-
-                                                <div class="card-body">
-                                                    <ul class="nav nav-tabs widget-nav-tabs pb-3 gap-4 mx-1 d-flex flex-nowrap" role="tablist">
-                                                        <li class="nav-item">
-                                                            <a aria-controls="navs-income-id" aria-selected="false" class="nav-link btn d-flex flex-column align-items-center justify-content-center" data-bs-target="#addRoleModal" data-bs-toggle="modal" role="tab">
-                                                                <div class="badge bg-label-secondary rounded p-2">
-                                                                    <i class="ti ti-plus ti-sm"></i>
-                                                                </div>
-                                                            </a>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                                <!--/ product cards -->
-                                                <!-- Add product Modal -->
-                                                <!-- Add Role Modal -->
-                                                <div aria-hidden="true" class="modal fade" id="addRoleModal" tabindex="-1">
-                                                    <div class="modal-dialog modal-lg modal-dialog-centered modal-add-new-role">
-                                                        <div class="modal-content p-3 p-md-5">
-                                                            <button aria-label="نزدیک" class="btn-close btn-pinned" data-bs-dismiss="modal" type="button"></button>
-                                                            <div class="modal-body">
-                                                                <div class="text-center mb-4">
-                                                                    <h3 class="role-title mb-5">افزودن محصول جدید</h3>
-                                                                </div>
-                                                                <!-- Add role form -->
-                                                                <form class="row g-3" id="addRoleForm" onsubmit="return false">
-                                                                    <div class="row">
-                                                                    <div class="col-md mb-md-0 mb-2">
-                                                                        <div class="form-check custom-option custom-option-icon">
-                                                                            <label class="form-check-label custom-option-content" for="customRadioIcon1">
-                                                                                <span class="custom-option-body">
-                                                                                    <i class="ti ti-rocket"></i>
-                                                                                    <span class="custom-option-title">مقاله</span>
-                                                                                </span>
-                                                                                <input checked class="form-check-input" id="customRadioIcon1" name="product_type" type="radio" value=""/>
-                                                                            </label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md mb-md-0 mb-2">
-                                                                        <div class="form-check custom-option custom-option-icon">
-                                                                            <label class="form-check-label custom-option-content" for="customRadioIcon2">
-                                                                                <span class="custom-option-body">
-                                                                                    <i class="ti ti-star"></i>
-                                                                                    <span class="custom-option-title"> مدل</span>
-                                                                                </span>
-                                                                                <input class="form-check-input" id="customRadioIcon2" name="product_type" type="radio" value=""/>
-                                                                            </label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md">
-                                                                        <div class="form-check custom-option custom-option-icon">
-                                                                            <label class="form-check-label custom-option-content" for="customRadioIcon3">
-                                                                                <span class="custom-option-body">
-                                                                                    <i class="ti ti-briefcase"></i>
-                                                                                    <span class="custom-option-title"> سرویس</span>
-                                                                                </span>
-                                                                                <input class="form-check-input" id="customRadioIcon3" name="product_type" type="radio" value=""/>
-                                                                            </label>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="col-md">
-                                                                        <div class="form-check custom-option custom-option-icon">
-                                                                            <label class="form-check-label custom-option-content" for="customRadioIcon4">
-                                                                                <span class="custom-option-body">
-                                                                                    <i class="ti ti-briefcase"></i>
-                                                                                    <span class="custom-option-title"> کد</span>
-                                                                                </span>
-                                                                                <input class="form-check-input" id="customRadioIcon4" name="product_type" type="radio" value=""/>
-                                                                            </label>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label" for="product_dataset">انتخاب دیتاست</label>
-                                                                        <input class="form-control" id="product_dataset" name="product_dataset" list="datalistOptions" placeholder="عنوان دیتاست را وارد نمایید ..."/>
-                                                                        <datalist id="datalistOptions">
-                                                                            {% for dataset in all_datasets %}
-                                                                                <option value="{{ dataset.name }}">{{ dataset.name }}</option>
-                                                                            {% endfor %}
-                                                                        </datalist>
-                                                                    </div>
-                                                                    <div class="col-12 mb-2">
-                                                                        <label class="form-label" for="product_title">عنوان محصول</label>
-                                                                        <input class="form-control" id="product_title" name="product_title"   type="text"/>
-                                                                    </div>
-                                                                     <div class="col-12 mb-2">
-                                                                        <label class="form-label" for="product_link">لینک محصول</label>
-                                                                        <input class="form-control" id="product_link" name="product_link"   type="text"/>
-                                                                    </div>
-                                                                    <div class="col-12 mb-2">
-                                                                        <label class="form-label" for="product_date">انتخابگر تاریخ</label>
-                                                                        <input class="form-control" id="product_date" placeholder="YYYY-MM-DD" type="text"/>
-                                                                    </div>
-                                                                    <div class="col-12 mb-2">
-                                                                        <label class="form-label" for="product_image">تصویر محصول</label>
-                                                                        <input class="form-control" id="product_image" name="product_image" type="file"/>
-                                                                    </div>
-                                                                    <div class="col-12 mb-2">
-                                                                        <label class="form-label" for="product_desc">توضیحات محصول </label>
-                                                                        <textarea class="form-control" id="product_desc" name="product_desc" rows="3"></textarea>
-                                                                    </div>
-                                                                    <div class="col-12 text-center mt-4">
-                                                                        <button class="btn btn-primary me-sm-3 me-1" type="submit">ثبت نهایی</button>
-                                                                        <button aria-label="" class="btn btn-label-secondary" data-bs-dismiss="modal" type="reset"> بازگشت</button>
-                                                                    </div>
-
-                                                                </form>
-                                                                <!--/ Add role form -->
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <!--/ Add Role Modal -->
-                                                <!-- / Add Role Modal -->
-                                            </div>
-                                            <!--/ Content -->
-                                        <!--/ my products list -->
-                                    </div>
-
-                                </div>
                             </div>
                             <!--/ Activity Timeline -->
 

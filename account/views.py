@@ -90,26 +90,27 @@ def profile_dataset_fa(request):
     my_datasets = Dataset.objects.filter(user_id=request.user.id).all().order_by('-id')
     paginator = Paginator(my_datasets, 9)
     my_datasets = paginator.get_page(page_number)
-
-    # all_datasets = Dataset.objects.all().values_list('id', 'name').order_by('name')
-    all_datasets = Dataset.objects.all().order_by('name')
-    print(all_datasets)
-    my_products = Product.objects.select_related('dataset').filter(dataset__user_id=request.user.id).order_by('-id')
-    return render(request, 'account/profile_dataset_fa.html', context={'my_datasets': my_datasets, 'my_products': my_products,'all_datasets': all_datasets})
+    return render(request, 'account/profile_dataset_fa.html', context={'my_datasets': my_datasets})
 
 
-def profile_dataset_add_product_fa(request):
+def profile_product_fa(request):
     if request.method == 'POST':
-        dataset_id = request.POST.get('dataset_id')
+        dataset_id = request.POST.get('product_dataset')
         product_title = request.POST.get('product_title')
         product_type = request.POST.get('product_type')
         product_link = request.POST.get('product_link')
         # product_productDate = request.POST.get('product_productDate')
         product_image = request.FILES.get('product_image')
+        product_desc = request.POST.get('product_desc')
 
         dataset = Dataset.objects.get(id=dataset_id)
-        Product.objects.create(dataset=dataset, title=product_title, type=product_type, link=product_link, image=product_image)
-    return render(request, 'account/profile_dataset_fa.html', context)
+        Product.objects.create(dataset=dataset, title=product_title, type=product_type, link=product_link, desc=product_desc, image=product_image)
+
+    all_datasets = Dataset.objects.all().values('id', 'name').order_by('name')
+    print(all_datasets)
+    my_products = Product.objects.select_related('dataset').filter(dataset__user_id=request.user.id).order_by('-id')
+
+    return render(request, 'account/profile_product_fa.html', context={'my_products': my_products,'all_datasets': all_datasets})
 
 def profile_marketplace_fa(request):
     if request.method == 'POST':

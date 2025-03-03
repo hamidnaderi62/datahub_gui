@@ -56,8 +56,11 @@ class Dataset(models.Model):
     dataType = models.CharField(max_length=50, choices=DATA_TYPE, default='Text', blank=True, null=True)
     dataset_tags = models.TextField(blank=True, null=True)
     tags = TaggableManager()
+    likes = models.ManyToManyField(User, related_name='likes', blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
 
+    def total_likes(self):
+        return self.likes.count()
     def __str__(self):
         return self.name[:50]
 
@@ -80,7 +83,6 @@ class PredefinedTag(models.Model):
 
     def __str__(self):
         return self.tag[:30]
-
 
 class Product(models.Model):
     TYPE = (

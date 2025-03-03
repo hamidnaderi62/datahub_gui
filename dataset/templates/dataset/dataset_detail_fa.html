@@ -32,9 +32,16 @@
                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
                                 {% endfor %}
                             </div>
-                            <span class="badge bg-label-danger">{{ dataset.tasks }}</span>
                             <i class="ti ti-share ti-sm mx-4">{% post_to_linkedin dataset.get_absolute_url "linkedin" %}</i>
-                            <i class="ti ti-bookmarks ti-sm"></i>
+
+                            <a onclick="dataset_like({{ dataset.id }})" href="#">
+                                {% if request.user in dataset.likes.all %}
+                                    <i id ="like_heart" class="ti ti-heart-filled ti-sm"></i>
+                                {% else %}
+                                    <i id ="like_heart" class="ti ti-heart ti-sm"></i>
+                                {% endif %}
+                            </a>
+                            <span id="total_likes"> {{ dataset.total_likes }} </span>
                         </div>
                     </div>
                     <div class="card academy-content shadow-none border">
@@ -362,5 +369,19 @@
 
 <!-- Chat Vendors JS -->
 <script src="{% static 'vendor/libs/bootstrap-maxlength/bootstrap-maxlength.js' %}"></script>
-
+<script>
+function dataset_like(dataset_id){
+    var like_heart_element = document.getElementById('like_heart');
+    var total_likes_element = document.getElementById('total_likes');
+    $.get(`/dataset/dataset_like_fa/${dataset_id}`).then(response=>{
+        total_likes_element.innerHTML = response['total_likes'];
+        if(response['liked'] === true){
+            like_heart_element.className = "ti ti-heart-filled ti-sm";
+        }
+        else {
+            like_heart_element.className = "ti ti-heart ti-sm";
+        }
+    })
+}
+</script>
 {% endblock %}

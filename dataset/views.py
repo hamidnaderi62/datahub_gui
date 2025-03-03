@@ -4,6 +4,7 @@ from .models import Dataset, User, Comment, PredefinedTag, Request, AnnotationRe
 from django.urls import reverse
 from django.core.paginator import Paginator
 from django.core.files.storage import default_storage
+from django.contrib.auth.decorators import login_required
 
 import pandas as pd
 from fastparquet import ParquetFile
@@ -58,6 +59,18 @@ def dataset_detail_fa(request, pk=None):
 
 def get_absolute_url(self, dataset):
     return reverse()
+
+
+@login_required
+def dataset_like_fa(request, pk):
+    dataset = get_object_or_404(Dataset, id=pk)
+    if request.user in dataset.likes.all():
+        dataset.likes.remove(request.user)
+        liked = False
+    else:
+        dataset.likes.add(request.user)
+        liked = True
+    return JsonResponse({'liked': liked, 'total_likes': dataset.likes.count()})
 
 
 def dataset_viewer_fa(request):

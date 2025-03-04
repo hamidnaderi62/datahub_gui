@@ -21,6 +21,28 @@ from taggit.models import Tag
 from django.db.models import Count
 
 
+
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+
+MODEL_PATH = "assets/models/sentiments/HooshvareLab"
+
+# Cache model and tokenizer to avoid redundant loading
+_model, _tokenizer, _pipeline = None, None, None
+
+def load_model():
+    global _model, _tokenizer, _pipeline
+    if _pipeline is None:  # Load the model only if it's not already loaded
+        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+        _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+        _pipeline = pipeline("sentiment-analysis", model=_model, tokenizer=_tokenizer)
+    return _pipeline
+
+def analyze_sentiment(comment):
+    sentiment_pipeline = load_model()
+    result = sentiment_pipeline(comment)[0]
+    return result["label"], round(result["score"], 2)
+
+
 def dataset_list_fa(request):
     q = request.GET.get('q')
     if q is not None:
@@ -42,7 +64,8 @@ def dataset_detail_fa(request, pk=None):
 
     if request.method == "POST" and 'submit_dataset_comment' in request.POST:
         text = request.POST.get('text')
-        Comment.objects.create(text=text, dataset=dataset, user=request.user)
+        label, score = analyze_sentiment(text)
+        Comment.objects.create(text=text, dataset=dataset, user=request.user, sentiment_label=label, sentiment_score=score)
 
     elif request.method == "POST" and 'submit_dataset_request' in request.POST:
         Request.objects.create(dataset=dataset, user=request.user)
@@ -264,3 +287,7 @@ class MyPygWalkerView2(PygWalkerView):
     df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
     queryset = df[:10]
     template_name = "dataset/dataset_viewer_fa.html"
+
+
+
+

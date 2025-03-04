@@ -69,6 +69,9 @@ class Comment(models.Model):
     dataset = models.ForeignKey(Dataset, on_delete=models.CASCADE, related_name="comments")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="comments")
     text = models.TextField()
+    sentiment_model = models.CharField(max_length=200, blank=True, null=True)
+    sentiment_label = models.CharField(max_length=10, blank=True, null=True)
+    sentiment_score = models.FloatField(blank=True, null=True)
     Date = models.DateField(auto_now_add=True)
 
     def __str__(self):

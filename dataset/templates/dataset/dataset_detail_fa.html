@@ -122,9 +122,9 @@
                              <hr class="my-4"/>
                                 <h5>نظرات</h5>
                                 <!-- Chat History -->
-                                <div class="col app-chat-history bg-body">
+                                <div class="col app-chat-history ">
                                     <div class="chat-history-wrapper">
-                                        <div class="chat-history-body bg-body">
+                                        <div class="chat-history-body ">
                                             <ul class="list-unstyled chat-history">
                                                 {% for comment in dataset.comments.all %}
                                                         <li class="chat-message">
@@ -158,7 +158,7 @@
                                         </div>
                                         <!-- Chat message form -->
                                         {% if request.user.is_authenticated %}
-                                            <div class="chat-history-footer shadow-sm">
+                                            <div class="chat-history-footer shadow-sm bg-body">
                                                 <form class="form-send-message d-flex justify-content-between align-items-center" method="post" >
                                                     {% csrf_token %}
                                                     <input type="text" name="text" id="text" class="form-control message-input border-0 me-3 shadow-none" placeholder="نظر خود را اینجا تایپ کنید"/>
@@ -322,48 +322,52 @@
             </div>
         </div>
 
-        <div class="card mb-4">
-                            <div class="card-body">
-                                <div class="row gy-4 mb-4">
-                                    {% for dataset in similar_datasets %}
-                                        <div class="col-sm-6 col-lg-4">
-                                        <div class="card p-2 h-100 shadow-none border">
 
-                                            <div class="card-body p-3 pt-2">
-                                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                                    <div class="me-md-1">
-                                                        {% for lang in dataset.language|split_by:','  %}
-                                                            <span class="badge badge-number badge-center bg-primary">{{ lang }}</span>
-                                                        {% endfor %}
-                                                    </div>
-                                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0">
-                                                        4.4
-                                                        <span class="text-warning">
-                                                            <i class="ti ti-star-filled me-1 mt-n1"></i>
-                                                        </span>
-                                                        <span class="text-muted">({{ dataset.size }}  k)</span>
-                                                    </h6>
-                                                </div>
-                                                <a class="h5"  href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">
-                                                    {{ dataset.name }}
-                                                </a>
-                                                <p class="mt-2">
-                                                    {{ dataset.owner }}
-                                                </p>
-                                                <p class="d-flex align-items-center">
-                                                    <i class="ti ti-clock me-2 mt-n1"></i>
-                                                    {{ dataset.datasetDate|date:"F j, Y"  }}
-                                                </p>
-                                                {% for tag in dataset.dataset_tags|split_by:','  %}
-                                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
+        <div class="card mb-4 mt-4">
+             <div class="me-1">
+                <h5 class="mb-1"> دیتاستهای مشابه </h5>
+            </div>
+            <div class="card-body">
+                <div class="row gy-4 mb-4">
+                    {% for dataset in similar_datasets %}
+                        <div class="col-sm-6 col-lg-4">
+                        <div class="card p-2 h-100 shadow-none border">
+
+                            <div class="card-body p-3 pt-2">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="me-md-1">
+                                        {% for lang in dataset.language|split_by:','  %}
+                                            <span class="badge badge-number badge-center bg-primary">{{ lang }}</span>
+                                        {% endfor %}
                                     </div>
-                                    {% endfor %}
+                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0">
+                                        4.4
+                                        <span class="text-warning">
+                                            <i class="ti ti-star-filled me-1 mt-n1"></i>
+                                        </span>
+                                        <span class="text-muted">({{ dataset.size }}  k)</span>
+                                    </h6>
                                 </div>
+                                <a class="h5"  href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">
+                                    {{ dataset.name }}
+                                </a>
+                                <p class="mt-2">
+                                    {{ dataset.owner }}
+                                </p>
+                                <p class="d-flex align-items-center">
+                                    <i class="ti ti-clock me-2 mt-n1"></i>
+                                    {{ dataset.datasetDate|date:"F j, Y"  }}
+                                </p>
+                                {% for tag in dataset.dataset_tags|split_by:','  %}
+                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
+                                {% endfor %}
                             </div>
                         </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
 <!-- / Sections:End -->
 
@@ -384,4 +388,6 @@ function dataset_like(dataset_id){
     })
 }
 </script>
+
+
 {% endblock %}

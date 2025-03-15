@@ -88,6 +88,9 @@ local_settings.py
 .env
 db.sqlite3
 
-# Assets
+### Assets
+
+# models
+models/
 *.bin
 

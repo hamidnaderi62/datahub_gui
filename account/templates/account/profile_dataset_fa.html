@@ -1,7 +1,6 @@
 {% extends 'base_fa.html' %}
 {% load static %}
-
-
+{% load my_filters %}
 
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon"/>
@@ -133,7 +132,7 @@
                                                                     <h5 class="h5 mb-1">{{ dataset.owner }}</h5>
                                                                     <p class="fw-medium mb-0"> {{ dataset.name }}
                                                                         <br/>
-                                                                        {{ dataset.datasetDate }}
+                                                                        {{ dataset.datasetDate |to_jalali_s  }}
                                                                     </p>
                                                                    <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">جزئیات</a>
                                                                    <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_annotation_request_fa" pk=dataset.id %}">تگ زنی</a>

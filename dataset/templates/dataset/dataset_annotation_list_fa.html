@@ -61,10 +61,10 @@
                                                             </span>
                                                         </a>
                                                     </div>
-                                                    <div class="d-flex align-items-center mb-3">
+                                                    <div class="d-flex align-items-center mb-3 "  >
                                                         <i class="ti ti-clock me-2 mt-n1"></i>
                                                         تاریخ ثبت:
-                                                        {{ annotation_request.requestDateTime|date:"F j, Y"  }}
+                                                        {{ annotation_request.requestDateTime |to_jalali_s  }}
                                                     </div>
                                                     <div class="d-flex align-items-center mb-3">
                                                         <i class="ti ti-timeline me-2 mt-n1"></i>

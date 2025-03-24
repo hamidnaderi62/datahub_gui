@@ -1,7 +1,6 @@
 {% extends 'base_fa.html' %}
 {% load static %}
-
-
+{% load my_filters %}
 
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon"/>
@@ -67,7 +66,7 @@
                                                         <li class="list-inline-item d-flex gap-1">
                                                             <i class="ti ti-calendar"></i>
                                                             عضویت:
-                                                            {{ user.date_joined }}
+                                                            {{ user.date_joined |to_jalali_c  }}
                                                         </li>
                                                     </ul>
                                                 </div>
@@ -147,7 +146,7 @@
                                                                         </div>
                                                                         <small>
                                                                             تاریخ درخواست:
-                                                                            {{ in_request.requestDate}}
+                                                                            {{ in_request.requestDate |to_jalali_s }}
                                                                         </small>
                                                                     </div>
                                                                     <div class="add-btn">
@@ -189,7 +188,7 @@
                                                                         </div>
                                                                         <small>
                                                                             تاریخ درخواست:
-                                                                            {{ out_request.requestDate}}
+                                                                            {{ out_request.requestDate |to_jalali_s }}
                                                                         </small>
                                                                     </div>
                                                                     <div class="add-btn">

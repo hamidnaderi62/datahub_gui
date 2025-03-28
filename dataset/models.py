@@ -44,7 +44,6 @@ class Dataset(models.Model):
     tasks = models.CharField(max_length=1000, blank=True, null=True)
     datasetDate = models.DateTimeField(blank=True, null=True)
     columnDataType = models.JSONField(blank=True, null=True)
-    sourceJson = models.JSONField(blank=True, null=True)
     image = models.ImageField(upload_to='images', blank=True, null=True)
     requestRequired = models.CharField(max_length=50, choices=REQUEST_REQUIRED, default='No', blank=True, null=True)
     downloadLink = models.JSONField(blank=True, null=True)

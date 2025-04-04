@@ -19,7 +19,8 @@ import json
 import datetime
 from taggit.models import Tag
 from django.db.models import Count
-
+import math
+from django.views.generic import TemplateView
 
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
@@ -96,6 +97,7 @@ def dataset_like_fa(request, pk):
     return JsonResponse({'liked': liked, 'total_likes': dataset.likes.count()})
 
 
+from django.utils.safestring import mark_safe
 def dataset_viewer_fa(request):
     # https://blog.jcharistech.com/2023/10/15/how-to-use-pygwalker-with-flask-in-python/
 
@@ -110,9 +112,9 @@ def dataset_viewer_fa(request):
     print('*******************************************************')
     print(df[:2])
     print('*******************************************************')
-    print(type(pygwalker_html))
+    # print(type(pygwalker_html))
     #return HttpResponse(pygwalker_html)
-    return render(request, 'dataset/dataset_viewer_fa.html', context={'pygwalker_html': pygwalker_html})
+    return render(request, 'dataset/dataset_viewer_fa.html', context={'pygwalker_html': mark_safe(pygwalker_html)})
 
 
 
@@ -273,21 +275,72 @@ def dataset_annotation_record_fa(request, pk=None):
     return render(request, 'dataset/dataset_annotation_record_fa.html', context={})
 
 
-class MyPygWalkerView1(StaticCsvPygWalkerView):
-    csv_file = os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv')
+
+
+
+
+class MyPygWalkerView(TemplateView):
     template_name = "dataset/dataset_viewer_fa.html"
 
+    def get_pygwalker_config1(self):
+        """Returns a config to show ONLY the data tab"""
+        return {
+            "config": {
+                "menu": {
+                    "data": True,  # Show Data Tab
+                    "visualize": False,  # Hide Visualize Tab
+                    "export": False,  # Hide Export Button
+                },
+                "theme": "light",  # Light theme
+                "show_cloud_tool": False  # Hide Cloud options
+            }
+        }
 
-class MyPygWalkerView(PygWalkerView):
-    queryset = Dataset.objects.all()
-    template_name = "dataset/dataset_viewer_fa.html"
+    def get_dataframe(self, dataset_id):
+
+        '''
+        # Allow only CSV files
+        if not safe_filename.lower().endswith('.csv'):
+            logger.error(f"Invalid file type: {safe_filename}")
+            return pd.DataFrame()
 
 
-class MyPygWalkerView2(PygWalkerView):
-    df = pd.read_csv(os.path.join(settings.MEDIA_ROOT + '/datasets_csv/', 'bike.csv'))
-    queryset = df[:10]
-    template_name = "dataset/dataset_viewer_fa.html"
+        # Check file size before reading (e.g., 50MB limit)
+        MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+        if os.path.getsize(csv_path) > MAX_FILE_SIZE:
+            logger.error(f"File too large: {safe_filename}")
+            return pd.DataFrame()
+        '''
 
+
+        csv_path = os.path.join(settings.MEDIA_ROOT, 'datasets_csv', 'bike.csv')
+        try:
+            # Read the entire file first to get row count
+            df = pd.read_csv(csv_path)
+
+            # Calculate 10% of the data (rounded up)
+            sample_size = math.ceil(len(df) * 0.1)
+
+            # Return random sample of 10%
+            return df.sample(n=sample_size, random_state=42)  # random_state for reproducibility
+
+        except Exception as e:
+            print(f"Error loading CSV: {str(e)}")
+            return pd.DataFrame()  # Return empty dataframe as fallback
+        # return pd.read_csv(csv_path).head(20)
+
+    def get_context_data(self):
+        context = super().get_context_data()
+        dataset_id = self.request.GET.get('dataset_id')
+        dataset_info = Dataset.objects.filter(id=dataset_id).get()
+        df = self.get_dataframe(dataset_id)
+        if df.empty:
+            context['error'] = "Could not load dataset"
+        else:
+            context['pygwalker_html'] = mark_safe(pyg.walk(df).to_html())
+            # context['pygwalker_html'] = mark_safe(pyg.walk(df, spec=json.dumps(self.get_pygwalker_config()), return_html=True).to_html())
+            context['dataset'] = dataset_info
+        return context
 
 
 

@@ -100,18 +100,11 @@
 
                             <hr class="mb-4 mt-2"/>
                             <h5>دیتاویور</h5>
-                            {% if html_obj %}
-                                <section class="section-py first-section-pt help-center-header">
-                                    {{ pyg | safe }}
-                                </section>
-                            {% else %}
-                                <form class="form-send-message d-flex justify-content-between align-items-center" method="post" >
-                                    {% csrf_token %}
-                                     <button type="submit" name="submit_dataset_viewer" class="btn btn-primary d-flex send-msg-btn">
-                                        <span class="align-middle d-md-inline-block d-none">نمایش اطلاعات توصیفی</span>
-                                     </button>
-                                </form>
-                            {% endif %}
+
+
+                            <a class="h5" href="{% url 'dataset:dataset_viewer_fa' %}?dataset_id={{ dataset.id }}">
+                               نمایش اطلاعات توصیفی
+                            </a>
 
                             <hr class="my-4"/>
                             <h5>ساختار دیتاست</h5>

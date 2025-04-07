@@ -6,4 +6,175 @@
 {% block content %}
 
 
+
+
+<div class="container-xxl flex-grow-1 container-p-y">
+
+
+    <h4 class="py-3 mb-4">
+
+    </h4>
+
+    <div class="app-academy">
+
+         <div class="row mb-4 g-4">
+        <div class="col-12 col-xl-12">
+            <div class="card h-100">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <h5 class="card-title m-0 me-2">موضوعات مورد علاقه شما</h5>
+                    <div class="dropdown">
+                        <button aria-expanded="false" aria-haspopup="true" class="btn p-0" data-bs-toggle="dropdown" id="topic" type="button">
+                            <i class="ti ti-dots-vertical"></i>
+                        </button>
+                        <div aria-labelledby="topic" class="dropdown-menu dropdown-menu-end">
+                            <a class="dropdown-item" href="javascript:void(0);">پربازدید ترین‌ها</a>
+                            <a class="dropdown-item" href="javascript:void(0);">مشاهده همه</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body row g-3">
+                    <div class="col-md-6">
+                        <div id="horizontalBarChart"></div>
+                    </div>
+                    <div class="col-md-6 d-flex justify-content-around align-items-center">
+                        <div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="text-primary me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">طراحی رابط کاربری</p>
+                                    <h5>35%</h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-baseline my-3">
+                                <span class="text-success me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">موسیقی</p>
+                                    <h5>14%</h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="text-danger me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">ری‌اکت نیتیو</p>
+                                    <h5>10%</h5>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="text-info me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">طراحی UX</p>
+                                    <h5>20%</h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-baseline my-3">
+                                <span class="text-secondary me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">انیمیشن</p>
+                                    <h5>12%</h5>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-baseline">
+                                <span class="text-warning me-2">
+                                    <i class="ti ti-circle-filled fs-6"></i>
+                                </span>
+                                <div>
+                                    <p class="mb-2">سئو</p>
+                                    <h5>9%</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+         <!-- Custom Icon Radios -->
+        <div class="col-xl-12">
+            <div class="card">
+                <h5 class="card-header">تعریف / بارگذاری دیتاست جدید</h5>
+                <div class="card-body">
+                    <form id="datasetForm" method="post" action="{% url 'dataset:dataset_define_stepper_fa' %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- Define Dataset Option -->
+                            <div class="col-md mb-md-0 mb-2">
+                                <div class="form-check custom-option custom-option-icon">
+                                    <label class="form-check-label custom-option-content" for="customRadioIcon1">
+                                        <span class="custom-option-body">
+                                            <i class="ti ti-rocket"></i>
+                                            <span class="custom-option-title"> تعریف دیتاست</span>
+                                            <small>تعریف دیتاست جدید به همراه فیلدهای اطلاعاتی دیتاست</small>
+                                        </span>
+                                        <input class="form-check-input" id="customRadioIcon1" name="dataset_option"
+                                               type="radio" value="define" checked/>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Upload Dataset Option -->
+                            <div class="col-md mb-md-0 mb-2">
+                                <div class="form-check custom-option custom-option-icon">
+                                    <label class="form-check-label custom-option-content" for="customRadioIcon2">
+                                        <span class="custom-option-body">
+                                            <i class="ti ti-star"></i>
+                                            <span class="custom-option-title"> بارگذاری دیتاست </span>
+                                            <small>بارگذاری فایل CSV یا Excel</small>
+                                        </span>
+                                        <input class="form-check-input" id="customRadioIcon2" name="dataset_option"
+                                               type="radio" value="upload"/>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary waves-effect waves-light">
+                                <span class="me-2">شروع کنید</span>
+                                <i class="ti ti-arrow-right scaleX-n1-rtl"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+        <!-- /Custom Icon Radios -->
+
+
+    </div>
+
+</div>
+
+
+
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('datasetForm');
+    const options = document.querySelectorAll('input[name="dataset_option"]');
+    options.forEach(option => {
+        option.addEventListener('change', function() {
+            if (this.value === 'define') {
+                form.action = "{% url 'dataset:dataset_define_stepper_fa' %}";
+            } else {
+                form.action = "{% url 'dataset:dataset_load_stepper_fa' %}";
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
+
+

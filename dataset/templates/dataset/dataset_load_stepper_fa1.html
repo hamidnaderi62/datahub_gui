@@ -1,7 +1,13 @@
-{% extends 'base_raw_fa.html' %}
 {% load static %}
+<!DOCTYPE html>
+<html class="light-style layout-menu-fixed layout-compact" data-assets-path="" data-template="horizontal-menu-template-no-customizer" data-theme="theme-default" dir="rtl" lang="fa">
 
-{% block content %}
+<head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
+    <title>بارگزاری دیتاست</title>
+    <meta content="" name="description"/>
+
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico' %}" rel="icon" type="image/x-icon"/>
     <!-- Icons -->
@@ -21,7 +27,6 @@
     <!-- define Page CSS -->
     <link href="{% static 'vendor/css/pages/app-invoice.css' %}" rel="stylesheet"/>
 
-
     <!-- step Vendors CSS -->
     <link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
@@ -40,12 +45,9 @@
     <link href="{% static 'vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/libs/datatables-buttons-bs5/buttons.bootstrap5.css' %}" rel="stylesheet"/>
     <link href="{% static 'libs/flatpickr/flatpickr.css' %}" rel="stylesheet"/>
-
-     <!-- tagify Vendors CSS -->
-     <link href="{% static 'vendor/libs/tagify/tagify.css' %}" rel="stylesheet"/>
-
     <!-- Row Group CSS -->
     <link href="{% static 'vendor/libs/datatables-rowgroup-bs5/rowgroup.bootstrap5.css' %}" rel="stylesheet"/>
+
     <!-- Form Validation -->
     <link href="{% static 'vendor/libs/@form-validation/form-validation.css' %}" rel="stylesheet"/>
 
@@ -57,9 +59,15 @@
     <!-- Better experience of RTL -->
     <link href="{% static 'css/rtl.css' %}" rel="stylesheet"/>
 
+    <!-- Upload File Vendors CSS -->
+    <link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
 
+</head>
 
- <!-- Layout container -->
+<body>
+<!-- Layout wrapper -->
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">
         <!-- Navbar -->
@@ -73,16 +81,19 @@
 
                 <!-- Default -->
                 <div class="row">
+                        <div class="col-12">
+                            <h5>پیش فرض</h5>
+                        </div>
                         <!-- Default Wizard -->
                         <div class="col-12 mb-4">
+                            <small class="text-light fw-medium">پایه</small>
                             <div class="bs-stepper wizard-numbered mt-2">
                                 <div class="bs-stepper-header">
                                     <div class="step" data-target="#step1">
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">1</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">تعریف متادیتا</span>
-                                                <span class="bs-stepper-subtitle">افزودن نام ستون و نوع داده</span>
+                                                <span class="bs-stepper-title">تعریف دیتاست</span>
                                             </span>
                                         </button>
                                     </div>
@@ -93,8 +104,7 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">2</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">نمایش متادیتا</span>
-                                                <span class="bs-stepper-subtitle">لیست ستون ها</span>
+                                                <span class="bs-stepper-title">بارگذاری فایل</span>
                                             </span>
                                         </button>
                                     </div>
@@ -105,8 +115,7 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">3</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">نمایش متادیتا</span>
-                                                <span class="bs-stepper-subtitle">لیست ستون ها</span>
+                                                <span class="bs-stepper-title">ویرایش ستون ها</span>
                                             </span>
                                         </button>
                                     </div>
@@ -117,8 +126,18 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">4</span>
                                             <span class="bs-stepper-label">
+                                                <span class="bs-stepper-title">نمایش ستون ها</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                    <div class="line">
+                                        <i class="ti ti-chevron-right"></i>
+                                    </div>
+                                    <div class="step" data-target="#step5">
+                                        <button class="step-trigger" type="button">
+                                            <span class="bs-stepper-circle">5</span>
+                                            <span class="bs-stepper-label">
                                                 <span class="bs-stepper-title">تایید نهایی</span>
-                                                <span class="bs-stepper-subtitle">تایید و ارسال داده</span>
                                             </span>
                                         </button>
                                     </div>
@@ -162,14 +181,6 @@
                                                     </select>
                                                 </div>
 
-                                                 <div class="col-sm-12">
-                                                    <label class="form-label d-block" for="dataset_tags">تگ ها</label>
-                                                    <input class="tagify-email-list" id="dataset_tags"  name="dataset_tags" value="aaa,bbb"/>
-                                                    <button class="btn btn-sm rounded-pill btn-icon btn-outline-primary mb-1" type="button">
-                                                        <span class="tf-icons ti ti-plus"></span>
-                                                    </button>
-                                                 </div>
-
                                                 <div class="col-sm-12">
                                                     <label class="form-label" for="dataset_desc">توضیحات</label>
                                                     <textarea class="form-control" id="dataset_desc" name="dataset_desc" placeholder="" rows="2"></textarea>
@@ -188,8 +199,34 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <!-- step2 -->
+                                         <!-- step2 -->
                                         <div class="content" id="step2">
+                                            <div class="row g-3">
+
+                                                   <div class="mb-3">
+                                                        <label class="form-label" for="my_file1">انتخاب فایل پیش فرض</label>
+                                                        <input class="form-control" id="my_file1" type="file"/>
+                                                    </div>
+                                                    <!-- DataTable with Buttons -->
+                                                    <div class="card">
+                                                        <div class="card-datatable table-responsive pt-0" id="tb_container">
+                                                        </div>
+                                                    </div>
+
+                                                <div class="col-12 d-flex justify-content-between">
+                                                    <button class="btn btn-label-secondary btn-prev">
+                                                        <i class="ti ti-arrow-left me-sm-1 me-0"></i>
+                                                        <span class="align-middle d-sm-inline-block d-none">قبلی</span>
+                                                    </button>
+                                                    <button class="btn btn-primary btn-next">
+                                                        <span class="align-middle d-sm-inline-block d-none me-sm-1">بعدی</span>
+                                                        <i class="ti ti-arrow-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- step3 -->
+                                        <div class="content" id="step3">
                                             <div class="row g-3">
 
                                                 <div class="container-xxl flex-grow-1 container-p-y">
@@ -202,27 +239,40 @@
                                                                     <form method="POST"  class="source-item pt-4 px-0 px-sm-4">
                                                                         {% csrf_token %}
                                                                         <div id="div_container" class="mb-3" data-repeater-list="group-a">
+
                                                                             <div class="repeater-wrapper pt-0 pt-md-0" data-repeater-item>
                                                                                 <div class="d-flex border rounded position-relative pe-0">
                                                                                     <div class="row w-100 p-3">
+
                                                                                         <div class="col-md-3 col-12 mb-md-0 mb-3">
                                                                                             <input class="form-control mb-3" id="col_name" name="col_name" min="3" placeholder="عنوان" type="text"/>
                                                                                         </div>
-                                                                                        <div class="col-md-3 col-12 mb-md-0 mb-3">
+
+                                                                                        <div class="col-md-2 col-12 mb-md-0 mb-3">
                                                                                             <select class="form-select mb-3" id="col_dtype" name="col_dtype">
                                                                                                 <option value="Text" selected>Text</option>
                                                                                                 <option value="Number">Number</option>
                                                                                             </select>
                                                                                         </div>
-                                                                                        <div class="col-md-6 col-12 mb-md-0 mb-3">
+
+                                                                                        <div class="col-md-5 col-12 mb-md-0 mb-3">
                                                                                             <textarea id="col_desc" name="col_desc" class="form-control" placeholder="توضیحات" rows="1"></textarea>
                                                                                         </div>
+
+                                                                                        <div class="col-md-2 col-12 mb-md-0 mb-3">
+                                                                                            <select class="form-select mb-3" id="di_type" name="di_type">
+                                                                                                <option value="None" selected>None</option>
+                                                                                                <option value="NER">NER</option>
+                                                                                            </select>
+                                                                                        </div>
+
                                                                                     </div>
                                                                                     <div class="d-flex flex-column align-items-center justify-content-between border-start p-2">
                                                                                         <i class="ti ti-x cursor-pointer" data-repeater-delete></i>
                                                                                     </div>
                                                                                 </div>
                                                                             </div>
+
                                                                         </div>
                                                                         <div class="row pb-4">
                                                                             <div class="col-12">
@@ -251,11 +301,12 @@
                                                 </div>
                                             </div>
                                         </div>
-                                         <!-- step3 -->
-                                        <div class="content" id="step3">
+                                         <!-- step4 -->
+                                        <div class="content" id="step4">
                                             <div class="row g-3">
 
                                                 <div class="card">
+                                                    <button class="btn btn-primary" type="button" onclick="de_identification_dataset()">گمنام سازی</button>
                                                     <div class="card-datatable table-responsive pt-0">
                                                         <table class="datatables-basic table" id="tb_metadata">
                                                             <thead>
@@ -263,6 +314,8 @@
                                                                     <th>عنوان ستون</th>
                                                                     <th>نوع داده</th>
                                                                     <th>توضیحات</th>
+                                                                    <th>روش گمنام سازی</th>
+                                                                    <th>وضعیت گمنام سازی</th>
                                                                 </tr>
                                                             </thead>
                                                         </table>
@@ -281,94 +334,10 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <!-- step4 -->
-                                        <div class="content" id="step4">
+                                        <!-- step5 -->
+                                        <div class="content" id="step5">
                                             <div class="row g-3">
-                                                <div>
 
-
-
-                                                    <div class="card-header d-flex justify-content-between pb-2 mb-1">
-                                                        <div class="card-title mb-1">
-                                                            <h5 class="m-0 me-2"> رضایت‌نامه ارسال داده‌ها به پلتفرم</h5>
-                                                            <small class="text-success text-uppercase fw-medium">
-                                                                قبل از ارسال هرگونه داده به پلتفرم، لطفاً شرایط و ضوابط زیر را با دقت مطالعه کنید:
-                                                            </small>
-                                                            <h6 class="mb-0">
-                                                                ما از شما می‌خواهیم که رضایت خود را برای ارسال داده‌های خود به پلتفرم و استفاده از آن‌ها در چارچوب اهداف مشخص‌شده در این پلتفرم اعلام کنید. با ارسال داده‌ها، شما تأیید می‌کنید که:
-                                                            </h6>
-                                                        </div>
-                                                    </div>
-                                                   <div class="card-body">
-                                                        <div class="nav-align-top">
-                                                            <div class="tab-content pb-0">
-                                                                <div class="tab-pane fade show active" id="navs-justified-new" role="tabpanel">
-                                                                    <ul class="timeline mb-2 pb-1">
-
-                                                                        <li class="timeline-item ps-4 border-left-dashed">
-                                                                            <span class="timeline-indicator-advanced timeline-indicator-success">
-                                                                                <i class="ti ti-circle-check"></i>
-                                                                            </span>
-                                                                            <div class="timeline-event ps-0 pb-0">
-                                                                                <div class="timeline-header">
-                                                                                    <small class="text-success text-uppercase fw-medium">1</small>
-                                                                                </div>
-                                                                                <h6 class="mb-0">
-                                                                                    شما مالک قانونی داده‌های ارسال‌شده هستید و تمامی حقوق مرتبط با آن‌ها به شما تعلق دارد.
-                                                                                </h6>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li class="timeline-item ps-4 border-left-dashed">
-                                                                            <span class="timeline-indicator-advanced timeline-indicator-success">
-                                                                                <i class="ti ti-circle-check"></i>
-                                                                            </span>
-                                                                            <div class="timeline-event ps-0 pb-0">
-                                                                                <div class="timeline-header">
-                                                                                    <small class="text-success text-uppercase fw-medium">2</small>
-                                                                                </div>
-                                                                                <h6 class="mb-0">
-                                                                                    داده‌های شما به منظور تحلیل، پژوهش و اشتراک‌گذاری در چارچوب اهداف تعیین‌شده استفاده خواهند شد.
-                                                                                </h6>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li class="timeline-item ps-4 border-left-dashed">
-                                                                            <span class="timeline-indicator-advanced timeline-indicator-success">
-                                                                                <i class="ti ti-circle-check"></i>
-                                                                            </span>
-                                                                            <div class="timeline-event ps-0 pb-0">
-                                                                                <div class="timeline-header">
-                                                                                    <small class="text-success text-uppercase fw-medium">3</small>
-                                                                                </div>
-                                                                                <h6 class="mb-0">
-                                                                                    پلتفرم متعهد به حفاظت از داده‌های شما و رعایت اصول امنیتی و حریم خصوصی است.
-                                                                                </h6>
-                                                                            </div>
-                                                                        </li>
-
-                                                                        <li class="timeline-item ps-4 border-left-dashed">
-                                                                            <span class="timeline-indicator-advanced timeline-indicator-success">
-                                                                                <i class="ti ti-circle-check"></i>
-                                                                            </span>
-                                                                            <div class="timeline-event ps-0 pb-0">
-                                                                                <div class="timeline-header">
-                                                                                    <small class="text-success text-uppercase fw-medium">4</small>
-                                                                                </div>
-                                                                                <h6 class="mb-0">
-                                                                                    شما می‌توانید در هر زمان درخواست لغو ارسال داده‌ها را داشته باشید، اما داده‌های ارسال‌شده قبلاً طبق شرایط این توافق‌نامه استفاده خواهند شد.
-                                                                                </h6>
-                                                                            </div>
-                                                                        </li>
-                                                                    </ul>
-
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                   </div>
-
-
-                                                </div>
                                                 <div class="form-check mt-2">
                                                     <input checked class="form-check-input" id="question_verify" name="question_verify" type="checkbox" value=""/>
                                                     <label class="form-check-label" for="question_verify">موافقت می نمایم</label>
@@ -415,6 +384,8 @@
 <!-- Drag Target Area To SlideIn Menu On Small Screens -->
 <div class="drag-target"></div>
 <!--/ Layout wrapper -->
+<!-- Core JS -->
+<!-- build:js assets/vendor/js/core.js -->
 
 <script src="{% static 'vendor/libs/jquery/jquery.js' %}"></script>
 <script src="{% static 'vendor/libs/popper/popper.js' %}"></script>
@@ -463,56 +434,35 @@
 <script src="{% static 'vendor/libs/@form-validation/popular.js' %}"></script>
 <script src="{% static 'vendor/libs/@form-validation/bootstrap5.js' %}"></script>
 <script src="{% static 'vendor/libs/@form-validation/auto-focus.js' %}"></script>
+
 <!-- Page JS -->
 <script src="{% static 'js/tables-datatables-basic.js' %}"></script>
-
-<!-- Tagify JS -->
-<script  src="{% static 'vendor/libs/tagify/tagify.js' %}"></script>
-
 
 <!-- Main JS -->
 <script src="{% static 'js/main.js' %}"></script>
 
+<!-- Upload Form Page JS -->
+<script src="{% static 'js/form-basic-inputs.js' %}"></script>
+
+<!-- papa JS -->
+<script src="{% static 'papa/papaparse.js' %}"></script>
 
 
 <!-- Datahub JS -->
-<script src="{% static 'datahub_js/dataset_define_stepper.js' %}"></script>
+<script src="{% static 'datahub_js/dataset_load_stepper.js' %}"></script>
 
 
 
 
-<script>
-// Get Django template variables and pass to your function
-const saveMetaDataUrl = "{% url 'dataset:saveTempMetaData' %}";
-const csrfToken = "{{ csrf_token }}";
-</script>
 
-<script>
-//************************************************
-// Step 1
-//
-//************************************************
-loadDatasetTags();
 
-function loadDatasetTags(){
-  const dataset_tags_El = document.querySelector('#dataset_tags'),
-    dataset_tags = new Tagify(dataset_tags_El, {
-      // email address validation (https://stackoverflow.com/a/46181/104380)
-      pattern: /^[a-zA-Z0-9]{3,}$/,
-      whitelist: {{dataset_tags_list| safe}},
-      dropdown: {
-        position: 'text',
-        enabled: 1 // show suggestions dropdown after 1 typed character
-      }
-    }),
-    button = dataset_tags_El.nextElementSibling; // "add new tag" action-button
 
-  button.addEventListener('click', onDatasetTagsAddButtonClick);
+<style>
+    button.btn-space {
+        margin-left: 1em;
+    }
+</style>
 
-  function onDatasetTagsAddButtonClick() {
-    dataset_tags.addEmptyTag();
-  }
-}
 
-</script>
-{% endblock %}
+</body>
+</html>

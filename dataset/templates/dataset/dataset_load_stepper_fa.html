@@ -1,12 +1,7 @@
+{% extends 'base_raw_fa.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html class="light-style layout-menu-fixed layout-compact" data-assets-path="" data-template="horizontal-menu-template-no-customizer" data-theme="theme-default" dir="rtl" lang="fa">
 
-<head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
-    <title>بارگزاری دیتاست</title>
-    <meta content="" name="description"/>
+{% block content %}
 
     <!-- Favicon -->
     <link href="{% static 'img/favicon/favicon.ico' %}" rel="icon" type="image/x-icon"/>
@@ -64,9 +59,7 @@
     <link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
 
-</head>
 
-<body>
 <!-- Layout wrapper -->
 <div class="layout-wrapper layout-navbar-full layout-horizontal layout-without-menu">
     <div class="layout-container">
@@ -456,7 +449,6 @@
 
 
 
-
 <style>
     button.btn-space {
         margin-left: 1em;
@@ -464,5 +456,4 @@
 </style>
 
 
-</body>
-</html>
+{% endblock %}

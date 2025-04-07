@@ -134,6 +134,8 @@ def dataset_define(request):
 def dataset_step(request):
     return render(request, 'dataset/dataset_step.html', context={})
 
+def dataset_new_stepper_fa(request):
+    return render(request, 'dataset/dataset_new_stepper_fa.html', context={})
 
 def dataset_define_stepper_fa(request):
     dataset_tags = PredefinedTag.objects.values_list('tag', flat=True)

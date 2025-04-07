@@ -10,6 +10,7 @@ urlpatterns = [
     path('dataset_list_fa', views.dataset_list_fa, name="dataset_list_fa"),
     path('dataset_detail_fa/<int:pk>', views.dataset_detail_fa, name="dataset_detail_fa"),
     path('dataset_like_fa/<int:pk>', views.dataset_like_fa, name="dataset_like_fa"),
+    path('dataset_new_stepper_fa', views.dataset_new_stepper_fa, name="dataset_new_stepper_fa"),
     path('dataset_define_stepper_fa', views.dataset_define_stepper_fa, name="dataset_define_stepper_fa"),
     path('saveTempMetaData', views.saveTempMetaData, name="saveTempMetaData"),
 

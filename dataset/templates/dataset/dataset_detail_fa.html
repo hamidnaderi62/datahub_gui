@@ -73,7 +73,7 @@
                                     <p class="text-nowrap">
                                         <i class="ti ti-file ti-sm me-2 mt-n2"></i>
                                         تاریخ ایجاد:
-                                        {{ dataset.datasetDate }}
+                                        {{ dataset.datasetDate|to_jalali_s }}
                                     </p>
                                 </div>
                                 <div>
@@ -316,7 +316,7 @@
         </div>
 
 
-        <div class="card mb-4 mt-4">
+        <div class="card mb-4 mt-4 ">
              <div class="me-1">
                 <h5 class="mb-1"> دیتاستهای مشابه </h5>
             </div>
@@ -349,7 +349,7 @@
                                 </p>
                                 <p class="d-flex align-items-center">
                                     <i class="ti ti-clock me-2 mt-n1"></i>
-                                    {{ dataset.datasetDate|date:"F j, Y"  }}
+                                    {{ dataset.datasetDate|to_jalali_s  }}
                                 </p>
                                 {% for tag in dataset.dataset_tags|split_by:','  %}
                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>

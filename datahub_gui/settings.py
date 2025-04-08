@@ -47,6 +47,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+
 ROOT_URLCONF = 'datahub_gui.urls'
 
 TEMPLATES = [
@@ -136,3 +137,9 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Ensure your storage backend handles paths correctly
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+

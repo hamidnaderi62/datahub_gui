@@ -57,7 +57,7 @@
                                                 </p>
                                                 <p class="d-flex align-items-center">
                                                     <i class="ti ti-clock me-2 mt-n1"></i>
-                                                    {{ dataset.datasetDate |to_jalali_s  }}
+                                                    {{ dataset.created |to_jalali_s  }}
                                                 </p>
                                                 {% for tag in dataset.dataset_tags|split_by:','  %}
                                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>

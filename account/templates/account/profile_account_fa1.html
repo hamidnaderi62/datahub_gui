@@ -1,0 +1,271 @@
+{% extends 'base_profile_fa.html' %}
+{% load static %}
+
+
+{% block content %}
+
+<!-- Favicon -->
+<link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon"/>
+<!-- Icons -->
+<link href="{% static 'vendor/fonts/fontawesome.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/fonts/tabler-icons.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/fonts/flag-icons.css' %}" rel="stylesheet"/>
+<!-- Core CSS -->
+<link  href="{% static 'vendor/css/rtl/core.css' %}" rel="stylesheet"/>
+<link  href="{% static 'vendor/css/rtl/theme-default.css' %}" rel="stylesheet"/>
+<link href="{% static 'css/demo.css' %}" rel="stylesheet"/>
+<!-- Vendors CSS -->
+<link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css' %}" rel="stylesheet"/>
+<!-- Page CSS -->
+<link href="{% static 'vendor/css/pages/page-profile.css' %}" rel="stylesheet"/>
+<!-- Helpers -->
+<script src="{% static 'vendor/js/helpers.js' %}"></script>
+
+<!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+<script src="{% static 'js/config.js' %}"></script>
+<!-- Better experience of RTL -->
+<link href="{% static 'css/rtl.css' %}" rel="stylesheet"/>
+
+        <!-- Layout container -->
+        <div class="layout-page">
+            <!-- Content wrapper -->
+            <div class="content-wrapper">
+
+                <!-- Content -->
+                    <div class="container-xxl flex-grow-1 container-p-y">
+                        <!-- Header -->
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card mb-4">
+                                    <div class="user-profile-header d-flex flex-column flex-sm-row text-sm-start text-center mb-4">
+                                        <div class="flex-shrink-0 mt-n2 mx-sm-0 mx-auto">
+                                             {% if request.user.profile.image %}
+                                                <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{{ user.profile.image.url }}"/>
+                                            {% else %}
+                                                <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/14.png' %}"/>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1 mt-3 mt-sm-5">
+                                            <div class="d-flex align-items-md-end align-items-sm-start align-items-center justify-content-md-between justify-content-start mx-4 flex-md-row flex-column gap-4">
+                                                <div class="user-profile-info">
+                                                    <h4>{{ user.username }}</h4>
+                                                    <ul class="list-inline mb-0 d-flex align-items-center flex-wrap justify-content-sm-start justify-content-center gap-2">
+                                                        <li class="list-inline-item d-flex gap-1">
+                                                            <i class="ti ti-color-swatch"></i>
+                                                            {{ user.bio }}
+                                                        </li>
+                                                        <li class="list-inline-item d-flex gap-1">
+                                                            <i class="ti ti-map-pin"></i>
+                                                            تهران
+                                                        </li>
+                                                        <li class="list-inline-item d-flex gap-1">
+                                                            <i class="ti ti-calendar"></i>
+                                                            عضویت:
+                                                            {{ user.date_joined }}
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                                <a class="btn btn-primary" href="javascript:void(0)">
+                                                    <i class="ti ti-check me-1"></i>
+                                                    متصل
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <!--/ Header -->
+
+                        <div class="row">
+                        <div class="col-md-12">
+                            <ul class="nav nav-pills flex-column flex-md-row mb-4">
+                                <li class="nav-item">
+                                    <a class="nav-link active" href="javascript:void(0);">
+                                        <i class="ti-xs ti ti-users me-1"></i>
+                                        حساب کاربری
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link"  href="{% url 'account:profile_dataset_fa' %}">
+                                        <i class="ti-xs ti ti-lock me-1"></i>
+                                        دیتاست های من
+                                    </a>
+                                </li>
+                                 <li class="nav-item">
+                                    <a class="nav-link"  href="{% url 'account:profile_product_fa' %}">
+                                        <i class="ti-xs ti ti-lock me-1"></i>
+                                        محصولات من
+                                    </a>
+                                </li>
+                                 <li class="nav-item">
+                                    <a class="nav-link"  href="{% url 'account:profile_marketplace_fa' %}">
+                                        <i class="ti-xs ti ti-lock me-1"></i>
+                                        بازار داده
+                                    </a>
+                                </li>
+                            </ul>
+                            <!-- Change Profile -->
+                            <form method="post" enctype="multipart/form-data" >
+                                {% csrf_token %}
+                                <div class="card mb-4">
+                                <h5 class="card-header">جزئیات پروفایل</h5>
+                                <!-- Account -->
+                                <div class="card-body">
+                                    <div class="d-flex align-items-start align-items-sm-center gap-4">
+                                        {% if request.user.profile.image %}
+                                            <img alt="کاربر-آواتار" class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" src="{{ user.profile.image.url }}"/>
+                                        {% else %}
+                                            <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/14.png' %}"/>
+                                        {% endif %}
+
+                                        <div class="button-wrapper">
+                                            <label class="btn btn-primary me-2 mb-3" for="upload" tabindex="0">
+                                                <span class="d-none d-sm-block">آپلود عکس جدید</span>
+                                                <i class="ti ti-upload d-block d-sm-none"></i>
+                                                <input accept="image/png, image/jpeg" class="account-file-input" hidden id="upload" name="image" type="file"/>
+                                            </label>
+                                            <button class="btn btn-label-secondary account-image-reset mb-3" type="button">
+                                                <i class="ti ti-refresh-dot d-block d-sm-none"></i>
+                                                <span class="d-none d-sm-block">حذف عکس</span>
+                                            </button>
+                                            <div class="text-muted">حداکثر 5 مگابایت و با فرمت png , jpeg , jpg</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr class="my-0"/>
+                                <div class="card-body">
+                                        <div class="row">
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="name">نام/ عنوان </label>
+                                                <input autofocus class="form-control" id="name" name="name" type="text" value="{{ user.profile.name }}"/>
+                                            </div>
+                                            <div class="mb-3 col-md-6">
+                                                <label class="form-label" for="phone"> تلفن</label>
+                                                <div class="input-group input-group-merge">
+                                                    <input class="form-control ltr" id="phone" name="phone"  type="text" value="{{ user.profile.phone }}"/>
+                                                    <span class="input-group-text">IR (+98)</span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3 col-md-12">
+                                                <label class="form-label" for="site">وبسایت</label>
+                                                <input class="form-control" id="site" name="site"  type="text" value="{{ user.profile.site }}"/>
+                                            </div>
+                                            <div class="mb-3 col-md-12">
+                                                <label class="form-label" for="address">آدرس</label>
+                                                <input class="form-control" id="address" name="address" type="text" value="{{ user.profile.address }}"/>
+                                            </div>
+                                            <div class="mb-3 col-md-12">
+                                                <label class="form-label" for="bio">بیو</label>
+                                                <input class="form-control" id="bio" name="bio" type="text" value="{{ user.profile.bio }}"/>
+                                            </div>
+
+
+                                        </div>
+                                        <div class="mt-2">
+                                            <button class="btn btn-primary me-2" name="btn_change_profile" type="submit">ذخیره تغییرات</button>
+                                            <button class="btn btn-label-secondary" type="reset">لغو</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <!-- /Account -->
+                            </div>
+                             <!--/ Change Profile -->
+
+                            <!-- Change Password -->
+                            <div class="card mb-4">
+                                <h5 class="card-header">تغییر رمز عبور</h5>
+                                <div class="card-body">
+                                    <form method="post" >
+                                        {% csrf_token %}
+                                        <div class="row">
+                                            <div class="mb-3 col-md-6 form-password-toggle">
+                                                <label class="form-label" for="currentPassword">رمز عبور فعلی</label>
+                                                <div class="input-group input-group-merge">
+                                                    <input class="form-control" id="currentPassword" name="currentPassword" placeholder="············" type="password"/>
+                                                    <span class="input-group-text cursor-pointer">
+                                                        <i class="ti ti-eye-off"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="mb-3 col-md-6 form-password-toggle">
+                                                <label class="form-label" for="newPassword">رمز عبور جدید</label>
+                                                <div class="input-group input-group-merge">
+                                                    <input class="form-control" id="newPassword" name="newPassword" placeholder="············" type="password"/>
+                                                    <span class="input-group-text cursor-pointer">
+                                                        <i class="ti ti-eye-off"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="mb-3 col-md-6 form-password-toggle">
+                                                <label class="form-label" for="confirmPassword">تأیید رمز عبور جدید</label>
+                                                <div class="input-group input-group-merge">
+                                                    <input class="form-control" id="confirmPassword" name="confirmPassword" placeholder="············" type="password"/>
+                                                    <span class="input-group-text cursor-pointer">
+                                                        <i class="ti ti-eye-off"></i>
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-12 mb-4">
+                                                <h6>الزامات رمز عبور:</h6>
+                                                <ul class="ps-3 mb-0">
+                                                    <li class="mb-1">حداقل 8 کارکتر</li>
+                                                    <li class="mb-1">حداقل یک حرف کوچک</li>
+                                                    <li>حداقل یک عدد یا نماد خاص</li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <button class="btn btn-primary me-2" name="btn_change_password"  type="submit">بروزرسانی رمز</button>
+                                                <button class="btn btn-label-secondary" type="reset">لغو</button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                            <!--/ Change Password -->
+                        </div>
+                    </div>
+
+                </div>
+                <!--/ Content -->
+                <!-- Footer -->
+                <!-- / Footer -->
+                <div class="content-backdrop fade"></div>
+            </div>
+            <!--/ Content wrapper -->
+        </div>
+        <!--/ Layout container -->
+    </div>
+</div>
+<!-- Overlay -->
+<div class="layout-overlay layout-menu-toggle"></div>
+<!-- Drag Target Area To SlideIn Menu On Small Screens -->
+<div class="drag-target"></div>
+<!--/ Layout wrapper -->
+<!-- Core JS -->
+<!-- build:js assets/vendor/js/core.js -->
+<script src="{% static 'vendor/libs/jquery/jquery.js' %}"></script>
+<script src="{% static 'vendor/libs/popper/popper.js' %}"></script>
+<!-- script src="{% static 'vendor/js/bootstrap.js' %}"></script -->
+<script src="{% static 'vendor/libs/node-waves/node-waves.js' %}"></script>
+<script src="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script>
+<script src="{% static 'vendor/libs/hammer/hammer.js' %}"></script>
+<script src="{% static 'vendor/libs/i18n/i18n.js' %}"></script>
+<script src="{% static 'vendor/libs/typeahead-js/typeahead.js' %}"></script>
+<script src="{% static 'vendor/js/menu.js' %}"></script>
+<!-- endbuild -->
+<!-- Vendors JS -->
+<script src="{% static 'vendor/libs/datatables-bs5/datatables-bootstrap5.js' %}"></script>
+<script src="{% static 'vendor/libs/datatables-bs5/i18n/fa.js' %}"></script>
+<!-- Main JS -->
+<script src="{% static 'js/main.js' %}"></script>
+<!-- Page JS -->
+<script src="{% static 'js/pages-profile.js' %}"></script>
+{% endblock %}

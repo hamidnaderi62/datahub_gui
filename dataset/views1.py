@@ -346,13 +346,13 @@ class MyPygWalkerView(TemplateView):
         return context
 
 
+
 ###################################################
-# save metadata of dataset to DB and upload file to cloud storage
+# save metadata of dataset to DB and upload file to storage
 ###################################################
 import os
 import json
 import re
-import requests
 from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -360,15 +360,6 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db import transaction
 from .models import Dataset  # Make sure to import your Dataset model
-
-# Cloud storage configuration
-ACCOUNT = 'AUTH_aiahr-ae5aa48e'
-CONTAINER_NAME = 'cn1'
-AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
-CLOUD_STORAGE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/{CONTAINER_NAME}/'
-
-#CLOUD_STORAGE_URL = 'https://storage.aiahura.com/v1/<ACCOUNT>/<CONTAINER_NAME>/'
-#AUTH_TOKEN = '<TOKEN>'
 
 # Temporary storage for upload tracking (in production, use database or Redis)
 upload_tracker = {}
@@ -395,111 +386,6 @@ def sanitize_filename(filename):
         filename = filename.replace(char, '_')
     return filename
 
-
-def upload_to_cloud_storage1(file_path, file_name, content_type='application/octet-stream'):
-    """Upload a file to cloud storage"""
-    url = f"{CLOUD_STORAGE_URL}{file_name}"
-    headers = {
-        'X-Auth-Token': AUTH_TOKEN,
-        'Content-Type': content_type
-    }
-
-    try:
-        with open(file_path, 'rb') as file:
-            response = requests.put(url, headers=headers, data=file)
-            response.raise_for_status()
-        return True, url
-    except Exception as e:
-        return False, str(e)
-
-
-def upload_to_cloud_storage(file_path, file_name, content_type='application/octet-stream'):
-    """Upload a file to cloud storage (with SSL verification disabled)"""
-    url = f"{CLOUD_STORAGE_URL}{file_name}"
-    headers = {
-        'X-Auth-Token': AUTH_TOKEN,
-        'Content-Type': content_type
-    }
-
-    try:
-        with open(file_path, 'rb') as file:
-            response = requests.put(url, headers=headers, data=file, verify=False)
-            response.raise_for_status()
-        return True, url
-    except Exception as e:
-        return False, str(e)
-
-
-@csrf_exempt
-def upload_dataset1(request):
-    try:
-        if request.method != 'POST':
-            return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
-
-        # Finalization request
-        if request.GET.get('finalize') == 'true':
-            return finalize_upload(request)
-
-        # Chunk upload handling
-        file_chunk = request.FILES.get('file')
-        if not file_chunk:
-            return JsonResponse({'status': 'error', 'message': 'No file chunk received'}, status=400)
-
-        chunk_number = int(request.POST.get('chunkNumber', 0))
-        total_chunks = int(request.POST.get('totalChunks', 1))
-        upload_id = request.POST.get('uploadId')
-        file_name = sanitize_filename(request.POST.get('fileName', ''))
-        file_size = int(request.POST.get('fileSize', 0))
-
-        # First chunk handling
-        if chunk_number == 0:
-            if not file_name:
-                return JsonResponse({'status': 'error', 'message': 'Filename required'}, status=400)
-
-            upload_id = f"{datetime.now().timestamp()}-{file_name}"
-            try:
-                metadata = json.loads(request.POST.get('metadata', '{}'))
-            except json.JSONDecodeError:
-                return JsonResponse({'status': 'error', 'message': 'Invalid metadata format'}, status=400)
-
-            upload_tracker[upload_id] = {
-                'file_name': file_name,
-                'file_size': file_size,
-                'total_chunks': total_chunks,
-                'chunks_received': set(),
-                'metadata': metadata,
-                'temp_files': [],
-                'created_at': datetime.now()
-            }
-
-        # Validate upload session
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
-            return JsonResponse({'status': 'error', 'message': 'Invalid upload ID'}, status=400)
-
-        # Check for duplicate chunks
-        if chunk_number in upload_tracker[upload_id]['chunks_received']:
-            return JsonResponse({'status': 'error', 'message': 'Duplicate chunk'}, status=400)
-            # Save chunk locally (temporarily)
-            chunk_dir = f"uploads/temp/{upload_id}"
-            chunk_path = f"{chunk_dir}/chunk_{chunk_number}"
-
-            try:
-                saved_path = default_storage.save(chunk_path, ContentFile(file_chunk.read()))
-            except Exception as e:
-                return JsonResponse({'status': 'error', 'message': f'Chunk save failed: {str(e)}'}, status=500)
-
-            # Update tracker
-            upload_tracker[upload_id]['chunks_received'].add(chunk_number)
-            upload_tracker[upload_id]['temp_files'].append(saved_path)
-
-            return JsonResponse({
-                'status': 'success',
-                'upload_id': upload_id,
-                'received_chunks': sorted(upload_tracker[upload_id]['chunks_received'])
-            })
-
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 @csrf_exempt
 def upload_dataset(request):
@@ -542,7 +428,7 @@ def upload_dataset(request):
                 'temp_files': [],
                 'created_at': datetime.now()
             }
-
+            print(upload_tracker)
         # Validate upload session
         if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
             return JsonResponse({'status': 'error', 'message': 'Invalid upload ID'}, status=400)
@@ -551,7 +437,7 @@ def upload_dataset(request):
         if chunk_number in upload_tracker[upload_id]['chunks_received']:
             return JsonResponse({'status': 'error', 'message': 'Duplicate chunk'}, status=400)
 
-        # Save chunk locally (temporarily)
+        # Save chunk
         chunk_dir = f"uploads/temp/{upload_id}"
         chunk_path = f"{chunk_dir}/chunk_{chunk_number}"
 
@@ -591,7 +477,7 @@ def finalize_upload(request):
                 'message': f'Missing chunks. Received {len(upload_info["chunks_received"])}/{upload_info["total_chunks"]}'
             }, status=400)
 
-        # Reassemble file locally first
+        # Reassemble file
         final_dir = os.path.join("uploads", datetime.now().strftime('%Y'), datetime.now().strftime('%m'),
                                  datetime.now().strftime('%d'))
         final_path = os.path.join(final_dir, upload_info['file_name'])
@@ -613,24 +499,8 @@ def finalize_upload(request):
                 'debug_path': final_path  # For debugging
             }, status=500)
 
-        # Upload to cloud storage
-        local_file_path = default_storage.path(final_path)
-        success, cloud_result = upload_to_cloud_storage(
-            local_file_path,
-            upload_info['file_name'],
-            content_type='application/octet-stream'  # Adjust based on your file type
-        )
 
-        if not success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Cloud upload failed: {cloud_result}'
-            }, status=500)
-
-        # Create database record with cloud storage URL
+        # Create database record
         try:
             with transaction.atomic():
                 metadata = upload_info['metadata']
@@ -644,7 +514,7 @@ def finalize_upload(request):
                     desc=metadata.get('dataset_desc'),
                     dataset_tags=metadata.get('dataset_tags'),
                     columnDataType=metadata.get('dataset_columnDataType'),
-                    downloadLink=cloud_result,  # Use the cloud storage URL
+                    downloadLink=final_path,
                     size=upload_info['file_size']
                 )
 
@@ -657,21 +527,20 @@ def finalize_upload(request):
                 default_storage.delete(final_path)
             return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'}, status=500)
 
-        # Cleanup - remove local files
+        # Cleanup
         cleanup_upload(upload_id)
-        if default_storage.exists(final_path):
-            default_storage.delete(final_path)
 
         return JsonResponse({
             'status': 'success',
             'dataset_id': dataset.id,
-            'file_url': cloud_result,  # Return cloud storage URL
+            'file_url': default_storage.url(final_path),
             'file_size': upload_info['file_size'],
             'metadata': metadata
         })
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
 
 def cleanup_upload(upload_id):
     """Clean up temporary files and tracker entry"""
@@ -680,6 +549,8 @@ def cleanup_upload(upload_id):
             if default_storage.exists(chunk_path):
                 default_storage.delete(chunk_path)
         del upload_tracker[upload_id]
+
+
 
 # **************************
 def upload_dataset1(request):

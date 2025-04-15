@@ -55,35 +55,35 @@
                             <h5>جزئیات</h5>
                             <div class="d-flex flex-wrap">
                                 <div class="me-5">
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-checks ti-sm me-2 mt-n2"></i>
+                                    <p class="text-nowrap"  >
+                                        <i class="ti ti-file ti-sm me-2 mt-n2"></i>
                                         حجم:
-                                        {{ dataset.size }}
+                                        <span style="direction: ltr"> {{ dataset.size | filesizeformat }}  </span>
                                     </p>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-user ti-sm me-2 mt-n2"></i>
+                                        <i class="ti ti-clear-formatting ti-sm me-2 mt-n2"></i>
                                         فرمت:
                                         {{ dataset.format }}
                                     </p>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-flag ti-sm me-2 mt-n2"></i>
+                                        <i class="ti ti-language ti-sm me-2 mt-n2"></i>
                                         زبان:
                                        {{ dataset.language  }}
                                     </p>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-file ti-sm me-2 mt-n2"></i>
+                                        <i class="ti ti-calendar ti-sm me-2 mt-n2"></i>
                                         تاریخ ایجاد:
                                         {{ dataset.created|to_jalali_s }}
                                     </p>
                                 </div>
                                 <div>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-pencil ti-sm me-2 mt-n2"></i>
+                                        <i class="ti ti-table-filled ti-sm me-2 mt-n2"></i>
                                         تعداد رکورد:
                                         {{ dataset.recordsNum }}
                                     </p>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-clock ti-sm me-2 mt-n2"></i>
+                                        <i class="ti ti-license ti-sm me-2 mt-n2"></i>
                                         لایسنس:
                                         {{ dataset.license}}
                                     </p>
@@ -334,11 +334,13 @@
                                         {% endfor %}
                                     </div>
                                     <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0">
+                                        <span class="text-muted" style="direction: ltr">({{ dataset.size |filesizeformat }} )</span>
+
                                         4.4
                                         <span class="text-warning">
                                             <i class="ti ti-star-filled me-1 mt-n1"></i>
                                         </span>
-                                        <span class="text-muted">({{ dataset.size }}  k)</span>
+
                                     </h6>
                                 </div>
                                 <a class="h5"  href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">
@@ -349,7 +351,7 @@
                                 </p>
                                 <p class="d-flex align-items-center">
                                     <i class="ti ti-clock me-2 mt-n1"></i>
-                                    {{ dataset.datasetDate|to_jalali_s  }}
+                                    {{ dataset.created|to_jalali_s  }}
                                 </p>
                                 {% for tag in dataset.dataset_tags|split_by:','  %}
                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>

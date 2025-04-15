@@ -119,34 +119,24 @@
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="pages-account-settings-account.html">
-                                    <i class="ti ti-settings me-2 ti-sm"></i>
-                                    <span class="align-middle">تنظیمات</span>
-                                </a>
-                            </li>
-                            <li>
-                                <a class="dropdown-item" href="pages-account-settings-billing.html">
-                                    <span class="d-flex align-items-center align-middle">
-                                        <i class="flex-shrink-0 ti ti-credit-card me-2 ti-sm"></i>
-                                        <span class="flex-grow-1 align-middle">خریدها</span>
-                                        <span class="flex-shrink-0 badge badge-center rounded-pill bg-label-danger w-px-20 h-px-20">2
-                                        </span>
-                                    </span>
-                                </a>
-                            </li>
-                            <li>
                                 <div class="dropdown-divider"></div>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="pages-faq.html">
-                                    <i class="ti ti-help me-2 ti-sm"></i>
-                                    <span class="align-middle">سوالات متداول</span>
+                                <a class="dropdown-item" href="{% url 'dataset:dataset_new_stepper_fa' %}">
+                                    <i class="ti ti-database-plus me-2 ti-sm"></i>
+                                    <span class="align-middle">تعریف دیتاست </span>
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{% url 'dataset:dataset_define_stepper_fa' %}">
-                                    <i class="ti ti-currency-dollar me-2 ti-sm"></i>
-                                    <span class="align-middle">تعریف دیتاست جدید</span>
+                                <a class="dropdown-item" href="{% url 'dataset:dataset_list_fa' %}">
+                                    <i class="ti ti-database-search me-2 ti-sm"></i>
+                                    <span class="align-middle">جستجوی دیتاست</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'dataset:dataset_annotation_list_fa' %}">
+                                    <i class="ti ti-database-x me-2 ti-sm"></i>
+                                    <span class="align-middle"> برچسب زنی</span>
                                 </a>
                             </li>
                             <li>

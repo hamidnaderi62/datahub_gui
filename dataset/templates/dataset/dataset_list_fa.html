@@ -41,12 +41,14 @@
                                                             <span class="badge badge-number badge-center bg-primary">{{ lang }}</span>
                                                         {% endfor %}
                                                     </div>
-                                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0">
+                                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0"  >
+                                                        <span class="text-muted" style="direction: ltr">({{ dataset.size | filesizeformat}}  )</span>
+
                                                         4.4
                                                         <span class="text-warning">
                                                             <i class="ti ti-star-filled me-1 mt-n1"></i>
                                                         </span>
-                                                        <span class="text-muted">({{ dataset.size }}  k)</span>
+
                                                     </h6>
                                                 </div>
                                                 <a class="h5" href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">

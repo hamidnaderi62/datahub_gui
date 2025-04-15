@@ -6,80 +6,80 @@
 {% block content %}
 
     <div class="col-xl-12 col-lg-7 col-md-7">
-                            <!-- Activity Timeline -->
-                            <div class="nav-align-top nav-tabs-shadow mb-4">
-                                <ul class="nav nav-tabs" role="tablist">
-                                     <li class="nav-item">
-                                        <button aria-controls="navs-top-messages" aria-selected="true" class="nav-link active" data-bs-target="#navs-top-my_datasets" data-bs-toggle="tab" role="tab" type="button"> دیتاستهای من</button>
-                                    </li>
-                                </ul>
-                                <div class="tab-content">
-                                    <div class="tab-pane fade show active" id="navs-top-my_datasets" role="tabpanel"><!-- Fun facts: Start -->
-                                        <section class="section-py landing-fun-facts" id="landingFunFacts">
-                                            <div class="container">
-                                                <div class="row gy-3">
-                                                    {% for dataset in my_datasets %}
-                                                        <div class="col-sm-6 col-lg-4">
-                                                            <div class="card border border-label-primary shadow-none">
-                                                                <div class="card-body text-center">
-                                                                    <img alt="دیتاست" class="mb-2" src="{% static 'img/front-pages/icons/laptop.png' %}"/>
-                                                                    <h5 class="h5 mb-1">{{ dataset.owner }}</h5>
-                                                                    <p class="fw-medium mb-0"> {{ dataset.name }}
-                                                                        <br/>
-                                                                        {{ dataset.created |to_jalali_s  }}
-                                                                    </p>
-                                                                   <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">جزئیات</a>
-                                                                   <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_annotation_request_fa" pk=dataset.id %}">تگ زنی</a>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    {% endfor %}
-                                                </div>
+        <!-- Activity Timeline -->
+        <div class="nav-align-top nav-tabs-shadow mb-4">
+            <ul class="nav nav-tabs" role="tablist">
+                 <li class="nav-item">
+                    <button aria-controls="navs-top-messages" aria-selected="true" class="nav-link active" data-bs-target="#navs-top-my_datasets" data-bs-toggle="tab" role="tab" type="button"> دیتاستهای من</button>
+                </li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="navs-top-my_datasets" role="tabpanel"><!-- Fun facts: Start -->
+                    <section class="section-py landing-fun-facts" id="landingFunFacts">
+                        <div class="container">
+                            <div class="row gy-3">
+                                {% for dataset in my_datasets %}
+                                    <div class="col-sm-6 col-lg-4">
+                                        <div class="card border border-label-primary shadow-none">
+                                            <div class="card-body text-center">
+                                                <img alt="دیتاست" class="mb-2" src="{% static 'img/front-pages/icons/laptop.png' %}"/>
+                                                <h5 class="h5 mb-1">{{ dataset.owner }}</h5>
+                                                <p class="fw-medium mb-0"> {{ dataset.name }}
+                                                    <br/>
+                                                    {{ dataset.created |to_jalali_s  }}
+                                                </p>
+                                               <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">جزئیات</a>
+                                               <a class="btn btn-sm btn-label-primary" href="{% url "dataset:dataset_annotation_request_fa" pk=dataset.id %}">تگ زنی</a>
                                             </div>
-
-                                            <div  class="demo-inline-spacing">
-                                                <nav aria-label="">
-                                                    {% if datasets.has_other_pages %}
-                                                        <ul class="pagination justify-content-center">
-                                                            {% if datasets.has_previous %}
-                                                                <li class="page-item prev">
-                                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
-                                                                        <i class="ti ti-chevrons-right ti-xs"></i>
-                                                                    </a>
-                                                                </li>
-                                                            {% endif %}
-                                                            {% for i in datasets.paginator.page_range %}
-                                                                {%  if datasets.number == i %}
-                                                                    <li class="page-item active">
-                                                                        <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
-                                                                    </li>
-                                                                {% else %}
-                                                                    <li class="page-item">
-                                                                        <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
-                                                                    </li>
-                                                                {% endif %}
-                                                            {% endfor %}
-                                                            {% if datasets.has_next %}
-                                                                <li class="page-item next">
-                                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
-                                                                        <i class="ti ti-chevrons-left ti-xs"></i>
-                                                                    </a>
-                                                                </li>
-                                                            {% endif %}
-                                                        </ul>
-                                                    {% endif %}
-                                                </nav>
-                                            </div>
-
-                                        </section>
-                                        <!-- Fun facts: End -->
+                                        </div>
                                     </div>
+                                {% endfor %}
                             </div>
-                            <!--/ Activity Timeline -->
+                        </div>
 
-                            <!-- Projects table -->
-                            <!--/ Projects table -->
+                        <div  class="demo-inline-spacing">
+                            <nav aria-label="">
+                                {% if datasets.has_other_pages %}
+                                    <ul class="pagination justify-content-center">
+                                        {% if datasets.has_previous %}
+                                            <li class="page-item prev">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-right ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% for i in datasets.paginator.page_range %}
+                                            {%  if datasets.number == i %}
+                                                <li class="page-item active">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if datasets.has_next %}
+                                            <li class="page-item next">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-left ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                {% endif %}
+                            </nav>
                         </div>
-                        </div>
+
+                    </section>
+                    <!-- Fun facts: End -->
+                </div>
+        </div>
+        <!--/ Activity Timeline -->
+
+        <!-- Projects table -->
+        <!--/ Projects table -->
+    </div>
+    </div>
 
 {% endblock %}

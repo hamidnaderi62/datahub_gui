@@ -353,7 +353,6 @@ import os
 import json
 import re
 import requests
-import hashlib
 from datetime import datetime
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -362,13 +361,11 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 from .models import Dataset  # Make sure to import your Dataset model
 
-
 # Cloud storage configuration
 ACCOUNT = 'AUTH_aiahr-ae5aa48e'
 CONTAINER_NAME = 'cn1'
 AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
 CLOUD_STORAGE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/{CONTAINER_NAME}/'
-STORAGE_BASE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/'
 
 #CLOUD_STORAGE_URL = 'https://storage.aiahura.com/v1/<ACCOUNT>/<CONTAINER_NAME>/'
 #AUTH_TOKEN = '<TOKEN>'
@@ -416,61 +413,13 @@ def upload_to_cloud_storage(file_path, file_name, content_type='application/octe
         return False, str(e)
 
 
-def get_user_container_name(user):
-    """Generate container name by hashing combined username and timestamp"""
-    if not user or not user.username:
-        raise ValueError("User must have a valid username")
-
-    # Get current timestamp
-    timestamp = str(int(datetime.now().timestamp()))
-
-    # Combine username and timestamp
-    combined_string = f"{user.username}-{timestamp}"
-
-    # Generate SHA256 hash of the combined string
-    combined_hash = hashlib.sha256(combined_string.encode()).hexdigest()[:16]
-    return f"user-{combined_hash}"
-
-
-
-def create_user_container(user):
-    """Create a container for the user if it doesn't exist"""
-    container_name = get_user_container_name(user)
-    url = f"{STORAGE_BASE_URL}{container_name}"
-    headers = {'X-Auth-Token': AUTH_TOKEN}
-
-    try:
-        response = requests.put(url, headers=headers, verify=False)  # Disable SSL verify for demo
-        if response.status_code not in [201, 202]:
-            return False, f"Container creation failed: {response.text}"
-        return True, container_name
-    except Exception as e:
-        return False, str(e)
-
-
-def upload_to_user_container(file_path, container_name, file_name, content_type='application/octet-stream'):
-    """Upload file to user's container"""
-    url = f"{STORAGE_BASE_URL}{container_name}/{file_name}"
-    headers = {
-        'X-Auth-Token': AUTH_TOKEN,
-        'Content-Type': content_type
-    }
-
-    try:
-        with open(file_path, 'rb') as file:
-            response = requests.put(url, headers=headers, data=file, verify=False)
-            response.raise_for_status()
-        return True, url
-    except Exception as e:
-        return False, str(e)
-
-
 @csrf_exempt
 def upload_dataset(request):
     try:
         if request.method != 'POST':
             return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
+        # Finalization request
         if request.GET.get('finalize') == 'true':
             return finalize_upload(request)
 
@@ -537,7 +486,7 @@ def upload_dataset(request):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
-def finalize_upload1(request):
+def finalize_upload(request):
     try:
         upload_id = request.GET.get('uploadId')
         if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
@@ -560,37 +509,28 @@ def finalize_upload1(request):
         final_path = os.path.join(final_dir, upload_info['file_name'])
 
         try:
+            # Ensure directory exists
             os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
+
             with default_storage.open(final_path, 'wb') as final_file:
                 for i in range(upload_info['total_chunks']):
                     chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
                     with default_storage.open(chunk_path, 'rb') as chunk_file:
                         final_file.write(chunk_file.read())
-
         except Exception as e:
             cleanup_upload(upload_id)
-        return JsonResponse({
-            'status': 'error',
-            'message': f'File assembly failed: {str(e)}'
-        }, status=500)
-
-        # Create user container if it doesn't exist
-        success, container_result = create_user_container(request.user)
-        if not success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
             return JsonResponse({
                 'status': 'error',
-                'message': f'Container creation failed: {container_result}'
+                'message': f'File assembly failed: {str(e)}',
+                'debug_path': final_path  # For debugging
             }, status=500)
 
-        # Upload to user's container
+        # Upload to cloud storage
         local_file_path = default_storage.path(final_path)
-        success, cloud_result = upload_to_user_container(
+        success, cloud_result = upload_to_cloud_storage(
             local_file_path,
-            container_result,  # container name returned from create_user_container
-            upload_info['file_name']
+            upload_info['file_name'],
+            content_type='application/octet-stream'  # Adjust based on your file type
         )
 
         if not success:
@@ -602,7 +542,7 @@ def finalize_upload1(request):
                 'message': f'Cloud upload failed: {cloud_result}'
             }, status=500)
 
-        # Create database record
+        # Create database record with cloud storage URL
         try:
             with transaction.atomic():
                 metadata = upload_info['metadata']
@@ -620,7 +560,6 @@ def finalize_upload1(request):
                     size=upload_info['file_size']
                 )
 
-
                 if metadata.get('dataset_tags'):
                     tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
                     dataset.tags.set(tags)
@@ -630,7 +569,7 @@ def finalize_upload1(request):
                 default_storage.delete(final_path)
             return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'}, status=500)
 
-        # Cleanup
+        # Cleanup - remove local files
         cleanup_upload(upload_id)
         if default_storage.exists(final_path):
             default_storage.delete(final_path)
@@ -638,158 +577,13 @@ def finalize_upload1(request):
         return JsonResponse({
             'status': 'success',
             'dataset_id': dataset.id,
-            'file_url': cloud_result,
+            'file_url': cloud_result,  # Return cloud storage URL
             'file_size': upload_info['file_size'],
             'metadata': metadata
         })
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-
-def finalize_upload(request):
-    try:
-        upload_id = request.GET.get('uploadId')
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid upload ID',
-                'code': 'INVALID_UPLOAD_ID',
-                'originalUploadId': upload_id if upload_id else None
-            }, status=400)
-
-        upload_info = upload_tracker[upload_id]
-        clean_upload_id = upload_id.split('-')[0]  # Extract timestamp part
-
-        # Verify all chunks were received
-        expected_chunks = set(range(upload_info['total_chunks']))
-        if upload_info['chunks_received'] != expected_chunks:
-            missing = expected_chunks - upload_info['chunks_received']
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Missing chunks: {sorted(missing)}',
-                'code': 'MISSING_CHUNKS',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id,
-                'received': sorted(upload_info['chunks_received']),
-                'expected': sorted(expected_chunks)
-            }, status=400)
-
-        # Reassemble file locally first
-        final_dir = os.path.join("uploads", datetime.now().strftime('%Y'),
-                                 datetime.now().strftime('%m'),
-                                 datetime.now().strftime('%d'))
-        final_path = os.path.join(final_dir, upload_info['file_name'])
-
-        try:
-            os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
-            with default_storage.open(final_path, 'wb') as final_file:
-                for i in range(upload_info['total_chunks']):
-                    chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
-                    with default_storage.open(chunk_path, 'rb') as chunk_file:
-                        final_file.write(chunk_file.read())
-        except Exception as assembly_error:
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'File assembly failed: {str(assembly_error)}',
-                'code': 'FILE_ASSEMBLY_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Create user container
-        container_success, container_result = create_user_container(request.user)
-        if not container_success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Container creation failed: {container_result}',
-                'code': 'CONTAINER_CREATION_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Upload to user's container
-        local_file_path = default_storage.path(final_path)
-        upload_success, upload_result = upload_to_user_container(
-            local_file_path,
-            container_result,
-            upload_info['file_name']
-        )
-
-        if not upload_success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Cloud upload failed: {upload_result}',
-                'code': 'CLOUD_UPLOAD_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id,
-                'container': container_result
-            }, status=500)
-        # Create database record
-        try:
-            with transaction.atomic():
-                metadata = upload_info['metadata']
-                dataset = Dataset.objects.create(
-                    user=request.user,
-                    name=metadata.get('dataset_name'),
-                    owner=metadata.get('dataset_owner'),
-                    language=metadata.get('dataset_language'),
-                    license=metadata.get('dataset_license'),
-                    format=metadata.get('dataset_format'),
-                    desc=metadata.get('dataset_desc'),
-                    dataset_tags=metadata.get('dataset_tags'),
-                    columnDataType=metadata.get('dataset_columnDataType'),
-                    downloadLink=upload_result,
-                    size=upload_info['file_size']
-                )
-
-                if metadata.get('dataset_tags'):
-                    tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
-                    dataset.tags.set(tags)
-        except Exception as db_error:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Database error: {str(db_error)}',
-                'code': 'DATABASE_ERROR',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Cleanup
-        cleanup_upload(upload_id)
-        if default_storage.exists(final_path):
-            default_storage.delete(final_path)
-
-        return JsonResponse({
-            'status': 'success',
-            'dataset_id': dataset.id,
-            'file_url': upload_result,
-            'file_size': upload_info['file_size'],
-            'metadata': metadata,
-            'originalUploadId': upload_id,
-            'cleanUploadId': clean_upload_id,
-            'container': container_result
-        })
-
-    except Exception as unexpected_error:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Unexpected error: {str(unexpected_error)}',
-            'code': 'UNEXPECTED_ERROR',
-            'originalUploadId': request.GET.get('uploadId', 'unknown'),
-            'cleanUploadId': request.GET.get('uploadId', 'unknown').split('-')[0]
-        }, status=500)
 
 
 def cleanup_upload(upload_id):
@@ -799,4 +593,18 @@ def cleanup_upload(upload_id):
             if default_storage.exists(chunk_path):
                 default_storage.delete(chunk_path)
         del upload_tracker[upload_id]
+
+# **************************
+def upload_dataset1(request):
+    if request.GET.get('finalize') == 'true':
+        upload_id = request.GET.get('uploadId')
+        if not upload_id:
+            return JsonResponse({'error': 'Missing uploadId'}, status=400)
+
+        # Your finalization logic here
+        try:
+            # Complete the upload process
+            return JsonResponse({'status': 'complete'})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
 

@@ -1,5 +1,5 @@
 from django import template
-
+import os
 register = template.Library()
 
 
@@ -53,3 +53,11 @@ def filesizeformat(value, precision=1):
                 return "%.*f %s" % (precision, size, unit)
         size /= 1024.0
     return "%.*f %s" % (precision, size, 'PB')
+
+
+
+
+
+@register.filter
+def basename(value):
+    return os.path.basename(value)

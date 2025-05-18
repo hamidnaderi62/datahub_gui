@@ -15,7 +15,7 @@ SECRET_KEY = 'django-insecure-b)nb*)#m^#3kxx+2=7v6kb!@sp(u6s0(s%)9x4-anlo^z7%qfo
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -143,3 +143,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 
+# Custom error handlers
+handler403 = 'account.views.custom_permission_denied'
+handler404 = 'account.views.custom_page_not_found'

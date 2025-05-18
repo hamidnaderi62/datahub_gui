@@ -56,6 +56,8 @@ class Dataset(models.Model):
     dataset_tags = models.TextField(blank=True, null=True)
     tags = TaggableManager()
     likes = models.ManyToManyField(User, related_name='likes', blank=True, null=True)
+    filesCount = models.IntegerField(blank=True, null=True)
+    refLink = models.TextField(blank=True, null=True)
     created = models.DateTimeField(auto_now_add=True)
 
     def total_likes(self):

@@ -292,22 +292,29 @@ async function finalizeUpload(url, csrfToken, uploadId) {
 
 
 function updateProgress(percent, message, isError = false) {
-    progressBar.style.width = `${percent}%`;
+    progressBar.style.width =`${percent}%`;
     progressBar.setAttribute('aria-valuenow', percent);
     progressText.textContent = message;
+
+    // Set RTL direction for progress text
+    progressText.style.direction = 'rtl';
+    progressText.style.textAlign = 'right';
 
     if (isError) {
         progressBar.classList.remove('bg-success');
         progressBar.classList.add('bg-danger');
-        uploadStatus.textContent = 'Upload failed';
+        uploadStatus.textContent = 'آپلود ناموفق بود';
+        uploadStatus.style.direction = 'rtl';
     } else if (percent >= 100) {
         progressBar.classList.remove('bg-danger');
         progressBar.classList.add('bg-success');
-        uploadStatus.textContent = 'Upload complete!';
+        uploadStatus.textContent = 'آپلود با موفقیت انجام شد!';
+        uploadStatus.style.direction = 'rtl';
     } else {
         progressBar.classList.remove('bg-danger');
         progressBar.classList.remove('bg-success');
-        uploadStatus.textContent = 'Upload in progress...';
+        uploadStatus.textContent = 'در حال آپلود...';
+        uploadStatus.style.direction = 'rtl';
     }
 }
 

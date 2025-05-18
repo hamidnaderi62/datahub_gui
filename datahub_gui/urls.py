@@ -13,7 +13,10 @@ urlpatterns = [
     path("pygwalker/", include("djangoaddicts.pygwalker.urls"), ),
 
 
+
 ]
+handler404 = "account.views.custom_page_not_found"
+handler403 = "account.views.custom_permission_denied"
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

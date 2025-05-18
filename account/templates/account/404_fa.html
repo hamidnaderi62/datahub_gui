@@ -1,0 +1,26 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+
+
+{% block content %}
+
+
+<!-- Content -->
+<!-- Error -->
+<div class="container-xxl container-p-y">
+    <div class="misc-wrapper">
+        <h2 class="mb-3 mt-4">صفحه یافت نشد :(</h2>
+        <p class="mb-4 mx-2">اوه! 😖 URL درخواست شده در این سرور یافت نشد.</p>
+        <a class="btn btn-primary mb-4" href="index.html">بازگشت به خانه</a>
+        <div class="mt-4">
+            <img alt="خطای متنوع صفحه" class="img-fluid" src="{% static 'img/illustrations/page-misc-error.png' %}" width="225"/>
+        </div>
+    </div>
+</div>
+<div class="container-fluid misc-bg-wrapper">
+    <img alt="خطای متنوع صفحه"  src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
+</div>
+<!-- /Error -->
+<!-- / Content -->
+
+{% endblock %}

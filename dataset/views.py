@@ -21,6 +21,7 @@ from taggit.models import Tag
 from django.db.models import Count
 import math
 from django.views.generic import TemplateView
+from django.utils.safestring import mark_safe
 
 
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
@@ -81,6 +82,12 @@ def dataset_detail_fa(request, pk=None):
     return render(request, 'dataset/dataset_detail_fa.html', context={'dataset': dataset, 'similar_datasets': similar_datasets})
 
 
+def dataset_download_fa(request, pk=None):
+    dataset = get_object_or_404(Dataset, id=pk)
+    # download_links = dataset.downloadLink
+    return render(request, 'dataset/dataset_download_fa.html', context={'dataset': dataset})
+
+
 def get_absolute_url(self, dataset):
     return reverse()
 
@@ -97,8 +104,8 @@ def dataset_like_fa(request, pk):
     return JsonResponse({'liked': liked, 'total_likes': dataset.likes.count()})
 
 
-from django.utils.safestring import mark_safe
-def dataset_viewer_fa(request):
+
+def dataset_viewer_fa1(request):
     # https://blog.jcharistech.com/2023/10/15/how-to-use-pygwalker-with-flask-in-python/
 
     # pf = ParquetFile(os.path.join(settings.MEDIA_ROOT + '/datasets_parq/', 'bike.parq'))
@@ -134,15 +141,19 @@ def dataset_define(request):
 def dataset_step(request):
     return render(request, 'dataset/dataset_step.html', context={})
 
+
 def predefined_tags(request):
     dataset_tags = list(PredefinedTag.objects.values_list('tag', flat=True))
     return JsonResponse(dataset_tags, safe=False)
 
+
 def dataset_new_stepper_fa(request):
     return render(request, 'dataset/dataset_new_stepper_fa.html', context={})
 
+
 def dataset_define_stepper_fa(request):
     return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
+
 
 def dataset_load_stepper_fa(request):
     return render(request, 'dataset/dataset_load_stepper_fa.html', context={})
@@ -189,8 +200,6 @@ def dataset_ner(request):
     return render(request, 'dataset/dataset_ner.html', context={})
 
 
-
-
 def dataset_annotation_request_fa(request, pk=None):
     if request.method == 'POST':
         if 'btn_annotation_request_cancel' in request.POST:
@@ -209,6 +218,7 @@ def dataset_annotation_request_fa(request, pk=None):
     annotation_requests = AnnotationRequest.objects.filter(dataset=dataset.id).order_by('-requestDateTime')
     annotation_responses = AnnotationResponse.objects.filter(dataset=dataset.id).order_by('-responseDate')
     return render(request, 'dataset/dataset_annotation_request_fa.html', context={'dataset': dataset,'annotation_requests': annotation_requests,'annotation_responses': annotation_responses})
+
 
 def create_annotation_request(request):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -278,11 +288,8 @@ def dataset_annotation_record_fa(request, pk=None):
     return render(request, 'dataset/dataset_annotation_record_fa.html', context={})
 
 
-
-
-
-
-class MyPygWalkerView(TemplateView):
+# read & show sample data from local file
+class MyPygWalkerView1(TemplateView):
     template_name = "dataset/dataset_viewer_fa.html"
 
     def get_pygwalker_config1(self):
@@ -345,6 +352,166 @@ class MyPygWalkerView(TemplateView):
             context['dataset'] = dataset_info
         return context
 
+# Read  & show sample data from first dataset url file (csv,parquet)
+import tempfile
+class MyPygWalkerView(TemplateView):
+    template_name = "dataset/dataset_viewer_fa.html"
+    AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
+
+    def get_first_download_url(self, download_links):
+        """Extract first download URL from dataset's downloadLink"""
+        try:
+            if download_links and isinstance(download_links, list):
+                return download_links[0]['url']
+        except (KeyError, IndexError, TypeError) as e:
+            print(f"Error parsing downloadLink: {str(e)}")
+        return None
+
+    def get_file_from_url(self, file_url):
+        """Download file from URL and return temporary file path"""
+        if not file_url:
+            return None
+
+        try:
+            response = requests.get(
+                file_url,
+                headers={'X-Auth-Token': self.AUTH_TOKEN},
+                stream=True
+            )
+            response.raise_for_status()
+
+            # Determine file type from extension
+            filename = file_url.split('/')[-1]
+            file_ext = filename.split('.')[-1].lower()
+
+            # Create a temporary file to store the downloaded data
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f'.{file_ext}') as tmp_file:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        tmp_file.write(chunk)
+                return tmp_file.name
+
+        except Exception as e:
+            print(f"Error downloading file: {str(e)}")
+            return None
+
+    def get_pygwalker_config1(self):
+        """Returns a config to show ONLY the data tab"""
+        return {
+            "config": {
+                "menu": {
+                    "data": True,  # Show Data Tab
+                    "visualize": False,  # Hide Visualize Tab
+                    "export": False,  # Hide Export Button
+                },
+                "theme": "light",  # Light theme
+                "show_cloud_tool": False  # Hide Cloud options
+            }
+        }
+
+    def get_pygwalker_config(self):
+        """Returns a config to show ONLY the data tab"""
+        return {
+            "config": {
+                "menu": {
+                    "data": True,
+                    "visualize": False,
+                    "export": False,
+                    "help": False
+                },
+                "header": {
+                    "title": "Data Viewer",
+                    "show": True
+                },
+                "themeKey": "vega",
+                "themeConfig": {
+                    "currentTheme": "light",
+                    "themeSet": "light"
+                },
+                "showCloudTool": False,
+                "enableExportData": False,
+                "enableExportImage": False
+            }
+        }
+
+
+
+
+    def read_data_file(self, file_path):
+        """Read data file (CSV or Parquet) into DataFrame"""
+        file_ext = file_path.split('.')[-1].lower()
+        try:
+            if file_ext == 'parquet':
+                return pd.read_parquet(file_path)
+            else:  # default to CSV
+                return pd.read_csv(file_path)
+        except Exception as e:
+            print(f"Error reading file: {str(e)}")
+            return pd.DataFrame()
+
+    def sample_dataframe(self, df):
+        """Take 10% sample of dataframe (max 100 rows)"""
+        if df.empty:
+            return df
+
+        sample_size = min(100, max(1, math.ceil(len(df) * 0.1)))
+        return df.sample(n=sample_size, random_state=42)  # random_state for reproducibility
+
+    def get_context_data(self):
+        context = super().get_context_data()
+        dataset_id = self.request.GET.get('dataset_id')
+
+        if not dataset_id:
+            context['error'] = "No dataset ID provided"
+            return context
+
+        try:
+            dataset = Dataset.objects.get(id=dataset_id)
+            context['dataset'] = dataset
+
+            # Get download links (assuming it's already a Python list)
+            download_links = dataset.downloadLink
+
+            # Get first download URL from downloadLink
+            file_url = self.get_first_download_url(download_links)
+
+            if not file_url:
+                context['error'] = "No valid download URL found"
+                return context
+
+            # Download and process the file
+            tmp_file_path = self.get_file_from_url(file_url)
+            if not tmp_file_path:
+                context['error'] = "Could not download file"
+                return context
+            df = self.read_data_file(tmp_file_path)
+
+            # Clean up temporary file
+            try:
+                os.unlink(tmp_file_path)
+            except:
+                pass
+
+            if df.empty:
+                context['error'] = "Could not load dataset"
+            else:
+                sampled_df = self.sample_dataframe(df)
+                pyg_html = pyg.walk(
+                    sampled_df
+                    , spec=self.get_pygwalker_config()
+                    , return_html=True
+                ).to_html()
+                context['pygwalker_html'] = mark_safe(pyg_html)
+
+        except Dataset.DoesNotExist:
+            context['error'] = "Dataset not found"
+
+        except Exception as e:
+            print(f"Unexpected error: {str(e)}")
+            context['error'] = "An unexpected error occurred"
+
+        return context
+
 
 ###################################################
 # save metadata of dataset to DB and upload file to cloud storage
@@ -365,13 +532,11 @@ from .models import Dataset  # Make sure to import your Dataset model
 
 # Cloud storage configuration
 ACCOUNT = 'AUTH_aiahr-ae5aa48e'
-CONTAINER_NAME = 'cn1'
 AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
-CLOUD_STORAGE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/{CONTAINER_NAME}/'
 STORAGE_BASE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/'
 
-#CLOUD_STORAGE_URL = 'https://storage.aiahura.com/v1/<ACCOUNT>/<CONTAINER_NAME>/'
-#AUTH_TOKEN = '<TOKEN>'
+# CONTAINER_NAME = 'cn1'
+# CLOUD_STORAGE_URL = f'https://storage.aiahura.com/v1/{ACCOUNT}/{CONTAINER_NAME}/'
 
 # Temporary storage for upload tracking (in production, use database or Redis)
 upload_tracker = {}
@@ -399,23 +564,6 @@ def sanitize_filename(filename):
     return filename
 
 
-def upload_to_cloud_storage(file_path, file_name, content_type='application/octet-stream'):
-    """Upload a file to cloud storage (with SSL verification disabled)"""
-    url = f"{CLOUD_STORAGE_URL}{file_name}"
-    headers = {
-        'X-Auth-Token': AUTH_TOKEN,
-        'Content-Type': content_type
-    }
-
-    try:
-        with open(file_path, 'rb') as file:
-            response = requests.put(url, headers=headers, data=file, verify=False)
-            response.raise_for_status()
-        return True, url
-    except Exception as e:
-        return False, str(e)
-
-
 def get_user_container_name(user):
     """Generate container name by hashing combined username and timestamp"""
     if not user or not user.username:
@@ -430,7 +578,6 @@ def get_user_container_name(user):
     # Generate SHA256 hash of the combined string
     combined_hash = hashlib.sha256(combined_string.encode()).hexdigest()[:16]
     return f"user-{combined_hash}"
-
 
 
 def create_user_container(user):
@@ -541,116 +688,6 @@ def finalize_upload1(request):
     try:
         upload_id = request.GET.get('uploadId')
         if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
-            return JsonResponse({'status': 'error', 'message': 'Invalid upload ID'}, status=400)
-
-        upload_info = upload_tracker[upload_id]
-
-        # Verify all chunks were received
-        expected_chunks = set(range(upload_info['total_chunks']))
-        if upload_info['chunks_received'] != expected_chunks:
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Missing chunks. Received {len(upload_info["chunks_received"])}/{upload_info["total_chunks"]}'
-            }, status=400)
-
-        # Reassemble file locally first
-        final_dir = os.path.join("uploads", datetime.now().strftime('%Y'), datetime.now().strftime('%m'),
-                                 datetime.now().strftime('%d'))
-        final_path = os.path.join(final_dir, upload_info['file_name'])
-
-        try:
-            os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
-            with default_storage.open(final_path, 'wb') as final_file:
-                for i in range(upload_info['total_chunks']):
-                    chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
-                    with default_storage.open(chunk_path, 'rb') as chunk_file:
-                        final_file.write(chunk_file.read())
-
-        except Exception as e:
-            cleanup_upload(upload_id)
-        return JsonResponse({
-            'status': 'error',
-            'message': f'File assembly failed: {str(e)}'
-        }, status=500)
-
-        # Create user container if it doesn't exist
-        success, container_result = create_user_container(request.user)
-        if not success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Container creation failed: {container_result}'
-            }, status=500)
-
-        # Upload to user's container
-        local_file_path = default_storage.path(final_path)
-        success, cloud_result = upload_to_user_container(
-            local_file_path,
-            container_result,  # container name returned from create_user_container
-            upload_info['file_name']
-        )
-
-        if not success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Cloud upload failed: {cloud_result}'
-            }, status=500)
-
-        # Create database record
-        try:
-            with transaction.atomic():
-                metadata = upload_info['metadata']
-                dataset = Dataset.objects.create(
-                    user=request.user,
-                    name=metadata.get('dataset_name'),
-                    owner=metadata.get('dataset_owner'),
-                    language=metadata.get('dataset_language'),
-                    license=metadata.get('dataset_license'),
-                    format=metadata.get('dataset_format'),
-                    desc=metadata.get('dataset_desc'),
-                    dataset_tags=metadata.get('dataset_tags'),
-                    columnDataType=metadata.get('dataset_columnDataType'),
-                    downloadLink=cloud_result,  # Use the cloud storage URL
-                    size=upload_info['file_size']
-                )
-
-
-                if metadata.get('dataset_tags'):
-                    tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
-                    dataset.tags.set(tags)
-        except Exception as e:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({'status': 'error', 'message': f'Database error: {str(e)}'}, status=500)
-
-        # Cleanup
-        cleanup_upload(upload_id)
-        if default_storage.exists(final_path):
-            default_storage.delete(final_path)
-
-        return JsonResponse({
-            'status': 'success',
-            'dataset_id': dataset.id,
-            'file_url': cloud_result,
-            'file_size': upload_info['file_size'],
-            'metadata': metadata
-        })
-
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-
-def finalize_upload(request):
-    try:
-        upload_id = request.GET.get('uploadId')
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
             return JsonResponse({
                 'status': 'error',
                 'message': 'Invalid upload ID',
@@ -739,6 +776,7 @@ def finalize_upload(request):
                 metadata = upload_info['metadata']
                 dataset = Dataset.objects.create(
                     user=request.user,
+                    code=container_result,
                     name=metadata.get('dataset_name'),
                     owner=metadata.get('dataset_owner'),
                     language=metadata.get('dataset_language'),
@@ -791,6 +829,173 @@ def finalize_upload(request):
             'cleanUploadId': request.GET.get('uploadId', 'unknown').split('-')[0]
         }, status=500)
 
+def finalize_upload(request):
+    try:
+        upload_id = request.GET.get('uploadId')
+        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Invalid upload ID',
+                'code': 'INVALID_UPLOAD_ID',
+                'originalUploadId': upload_id if upload_id else None
+            }, status=400)
+
+        upload_info = upload_tracker[upload_id]
+        clean_upload_id = upload_id.split('-')[0]  # Extract timestamp part
+
+        # Verify all chunks were received
+        expected_chunks = set(range(upload_info['total_chunks']))
+        if upload_info['chunks_received'] != expected_chunks:
+            missing = expected_chunks - upload_info['chunks_received']
+            cleanup_upload(upload_id)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Missing chunks: {sorted(missing)}',
+                'code': 'MISSING_CHUNKS',
+                'originalUploadId': upload_id,
+                'cleanUploadId': clean_upload_id,
+                'received': sorted(upload_info['chunks_received']),
+                'expected': sorted(expected_chunks)
+            }, status=400)
+
+        # Reassemble file locally first
+        final_dir = os.path.join("uploads", datetime.now().strftime('%Y'),
+                                 datetime.now().strftime('%m'),
+                                 datetime.now().strftime('%d'))
+        final_path = os.path.join(final_dir, upload_info['file_name'])
+
+        try:
+            os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
+            with default_storage.open(final_path, 'wb') as final_file:
+                for i in range(upload_info['total_chunks']):
+                    chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
+                    with default_storage.open(chunk_path, 'rb') as chunk_file:
+                        final_file.write(chunk_file.read())
+        except Exception as assembly_error:
+            cleanup_upload(upload_id)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'File assembly failed: {str(assembly_error)}',
+                'code': 'FILE_ASSEMBLY_FAILED',
+                'originalUploadId': upload_id,
+                'cleanUploadId': clean_upload_id
+            }, status=500)
+
+        # Create user container
+        container_success, container_result = create_user_container(request.user)
+        if not container_success:
+            cleanup_upload(upload_id)
+            if default_storage.exists(final_path):
+                default_storage.delete(final_path)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Container creation failed: {container_result}',
+                'code': 'CONTAINER_CREATION_FAILED',
+                'originalUploadId': upload_id,
+                'cleanUploadId': clean_upload_id
+            }, status=500)
+
+        # Upload to user's container
+        local_file_path = default_storage.path(final_path)
+        upload_success, upload_result = upload_to_user_container(
+            local_file_path,
+            container_result,
+            upload_info['file_name']
+        )
+
+        if not upload_success:
+            cleanup_upload(upload_id)
+            if default_storage.exists(final_path):
+                default_storage.delete(final_path)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Cloud upload failed: {upload_result}',
+                'code': 'CLOUD_UPLOAD_FAILED',
+                'originalUploadId': upload_id,
+                'cleanUploadId': clean_upload_id,
+                'container': container_result
+            }, status=500)
+
+        # Prepare the download link information
+
+        file_urls = []
+        total_files_count = 0
+
+        download_link = {
+            "url": upload_result,
+            "size": upload_info['file_size'],
+            "size_human": sizeof_fmt(upload_info['file_size'])
+        }
+        file_urls.append(download_link)
+        total_files_count = len(file_urls)
+        # Create database record
+        try:
+            with transaction.atomic():
+                metadata = upload_info['metadata']
+                dataset = Dataset.objects.create(
+                    user=request.user,
+                    code=container_result,
+                    name=metadata.get('dataset_name'),
+                    owner=metadata.get('dataset_owner'),
+                    language=metadata.get('dataset_language'),
+                    license=metadata.get('dataset_license'),
+                    format=metadata.get('dataset_format'),
+                    desc=metadata.get('dataset_desc'),
+                    dataset_tags=metadata.get('dataset_tags'),
+                    columnDataType=metadata.get('dataset_columnDataType'),
+                    downloadLink=file_urls,
+                    filesCount=total_files_count,
+                    size=upload_info['file_size']
+                )
+
+                if metadata.get('dataset_tags'):
+                    tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
+                    dataset.tags.set(tags)
+        except Exception as db_error:
+            cleanup_upload(upload_id)
+            if default_storage.exists(final_path):
+                default_storage.delete(final_path)
+            return JsonResponse({
+                'status': 'error',
+                'message': f'Database error: {str(db_error)}',
+                'code': 'DATABASE_ERROR',
+                'originalUploadId': upload_id,
+                'cleanUploadId': clean_upload_id
+            }, status=500)
+
+        # Cleanup
+        cleanup_upload(upload_id)
+        if default_storage.exists(final_path):
+            default_storage.delete(final_path)
+
+        return JsonResponse({
+            'status': 'success',
+            'download_link': download_link,
+            'dataset_id': dataset.id,
+            'metadata': metadata,
+            'originalUploadId': upload_id,
+            'cleanUploadId': clean_upload_id,
+            'container': container_result
+        })
+
+    except Exception as unexpected_error:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Unexpected error: {str(unexpected_error)}',
+            'code': 'UNEXPECTED_ERROR',
+            'originalUploadId': request.GET.get('uploadId', 'unknown'),
+            'cleanUploadId': request.GET.get('uploadId', 'unknown').split('-')[0]
+        }, status=500)
+
+
+def sizeof_fmt(num, suffix='B'):
+    """Convert bytes to human-readable format"""
+    for unit in ['', 'K', 'M', 'G', 'T', 'P', 'E', 'Z']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Y', suffix)
+
 
 def cleanup_upload(upload_id):
     """Clean up temporary files and tracker entry"""
@@ -800,3 +1005,75 @@ def cleanup_upload(upload_id):
                 default_storage.delete(chunk_path)
         del upload_tracker[upload_id]
 
+###################################################
+###################################################
+# download from file from cloud storage
+###################################################
+
+@login_required
+def download_file_from_cloud1(request, pk):
+    ACCOUNT = 'AUTH_aiahr-ae5aa48e'
+    AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
+
+    dataset = get_object_or_404(Dataset, id=pk, file_number=file_number )
+
+
+    # download_url = f'https://storage.aiahura.com/v1/{ACCOUNT}/{container_name}/{file_name}'
+    download_url = dataset.downloadLink
+    auth_token = AUTH_TOKEN
+
+    try:
+        response = requests.get(
+            download_url,
+            headers={'X-Auth-Token': auth_token},
+            stream=True
+        )
+        response.raise_for_status()
+
+        # Create Django response
+        django_response = HttpResponse(
+            response.content,
+            content_type=response.headers.get('Content-Type')
+        )
+
+        # Set content disposition for download
+        django_response['Content-Disposition'] = f'attachment; filename="{dataset.code}"'
+        return django_response
+
+    except requests.exceptions.RequestException as e:
+        # Handle errors (redirect or show error page)
+        return HttpResponseRedirect('/download-error/')
+
+
+@login_required
+def download_file_from_cloud(request):
+    AUTH_TOKEN = '391af3cea0e0248b92ad2d2671d4eaa8669854be'
+    file_url = request.GET.get('file_url')
+
+    if not file_url:
+        return HttpResponseRedirect('/download-error/')
+
+    try:
+        response = requests.get(
+            file_url,
+            headers={'X-Auth-Token': AUTH_TOKEN},
+            stream=True
+        )
+        response.raise_for_status()
+
+        # Get file size for progress calculation
+        file_size = int(response.headers.get('content-length', 0))
+        filename = file_url.split('/')[-1]
+
+        # Create streaming response
+        response = HttpResponse(
+            response.iter_content(chunk_size=8192),
+            content_type=response.headers.get('Content-Type', 'application/octet-stream')
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Content-Length'] = file_size
+
+        return response
+
+    except requests.exceptions.RequestException as e:
+        return HttpResponseRedirect('/download-error/')

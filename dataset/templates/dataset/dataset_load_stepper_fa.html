@@ -97,7 +97,7 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">2</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">بارگذاری فایل</span>
+                                                <span class="bs-stepper-title">بارگذاری فایل دیتاست</span>
                                             </span>
                                         </button>
                                     </div>
@@ -108,7 +108,7 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">3</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">ویرایش ستون ها</span>
+                                                <span class="bs-stepper-title">انتخاب روش گمنام سازی</span>
                                             </span>
                                         </button>
                                     </div>
@@ -119,7 +119,7 @@
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">4</span>
                                             <span class="bs-stepper-label">
-                                                <span class="bs-stepper-title">نمایش ستون ها</span>
+                                                <span class="bs-stepper-title">گمنام سازی دیتاست</span>
                                             </span>
                                         </button>
                                     </div>
@@ -129,6 +129,17 @@
                                     <div class="step" data-target="#step5">
                                         <button class="step-trigger" type="button">
                                             <span class="bs-stepper-circle">5</span>
+                                            <span class="bs-stepper-label">
+                                                <span class="bs-stepper-title">نمایش دیتاست گمنام سازی شده</span>
+                                            </span>
+                                        </button>
+                                    </div>
+                                    <div class="line">
+                                        <i class="ti ti-chevron-right"></i>
+                                    </div>
+                                    <div class="step" data-target="#step6">
+                                        <button class="step-trigger" type="button">
+                                            <span class="bs-stepper-circle">6</span>
                                             <span class="bs-stepper-label">
                                                 <span class="bs-stepper-title">تایید نهایی</span>
                                             </span>
@@ -299,7 +310,7 @@
                                             <div class="row g-3">
 
                                                 <div class="card">
-                                                    <button class="btn btn-primary" type="button" onclick="de_identification_dataset()">گمنام سازی</button>
+                                                    <button class="btn btn-success" type="button" onclick="de_identification_dataset()">گمنام سازی</button>
                                                     <div class="card-datatable table-responsive pt-0">
                                                         <table class="datatables-basic table" id="tb_metadata">
                                                             <thead>
@@ -308,7 +319,7 @@
                                                                     <th>نوع داده</th>
                                                                     <th>توضیحات</th>
                                                                     <th>روش گمنام سازی</th>
-                                                                    <th>وضعیت گمنام سازی</th>
+
                                                                 </tr>
                                                             </thead>
                                                         </table>
@@ -327,8 +338,28 @@
                                                 </div>
                                             </div>
                                         </div>
-                                        <!-- step5 -->
+                                         <!-- step5 -->
                                         <div class="content" id="step5">
+                                            <div class="row g-3">
+                                                    <div class="card">
+                                                        <div class="card-datatable table-responsive pt-0" id="tb_anonymized_container">
+                                                        </div>
+                                                    </div>
+
+                                                <div class="col-12 d-flex justify-content-between">
+                                                    <button class="btn btn-label-secondary btn-prev">
+                                                        <i class="ti ti-arrow-left me-sm-1 me-0"></i>
+                                                        <span class="align-middle d-sm-inline-block d-none">قبلی</span>
+                                                    </button>
+                                                    <button class="btn btn-primary btn-next">
+                                                        <span class="align-middle d-sm-inline-block d-none me-sm-1">بعدی</span>
+                                                        <i class="ti ti-arrow-right"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- step6 -->
+                                        <div class="content" id="step6">
                                             <div class="row g-3">
 
                                                 <div class="form-check mt-2">
@@ -442,6 +473,7 @@
 
 
 <!-- Datahub JS -->
+<script src="{% static 'datahub_js/compromise.js' %}"></script>
 <script src="{% static 'datahub_js/dataset_load_stepper.js' %}"></script>
 
 

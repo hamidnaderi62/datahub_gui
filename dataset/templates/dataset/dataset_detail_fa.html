@@ -32,7 +32,7 @@
                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
                                 {% endfor %}
                             </div>
-                            <i class="ti ti-share ti-sm mx-4">{% post_to_linkedin dataset.get_absolute_url "linkedin" %}</i>
+                            <i class="ti ti-sm mx-4">{% post_to_linkedin dataset.get_absolute_url "linkedin" %}</i>
 
                             <a onclick="dataset_like({{ dataset.id }})" href="#">
                                 {% if request.user in dataset.likes.all %}
@@ -42,6 +42,8 @@
                                 {% endif %}
                             </a>
                             <span id="total_likes"> {{ dataset.total_likes }} </span>
+
+
                         </div>
                     </div>
                     <div class="card academy-content shadow-none border">
@@ -56,60 +58,83 @@
                             <div class="d-flex flex-wrap">
                                 <div class="me-5">
                                     <p class="text-nowrap"  >
+                                        <i class="ti ti-database-plus ti-sm me-2 mt-n2"></i>
+                                        مرجع:
+                                        <span style="direction: ltr">
+                                           {% if dataset.referenceOwner %}
+                                                <img src="{% static 'logo/' %}{{ dataset.referenceOwner }}.png" style="width: 50px;" alt="logo" />
+                                           {% else %}
+                                                <img src="{% static 'logo/datahub.png' %}" style="width: 50px;" alt="logo" />
+                                           {% endif %}
+                                        </span>
+                                    </p>
+                                    <p class="text-nowrap"  >
                                         <i class="ti ti-file ti-sm me-2 mt-n2"></i>
                                         حجم:
-                                        <span style="direction: ltr"> {{ dataset.size | filesizeformat }}  </span>
+                                        <span style="direction: ltr">
+                                            {% if dataset.size %}  {{ dataset.size | filesizeformat }}  {% else %} - {% endif %}
+                                        </span>
                                     </p>
                                     <p class="text-nowrap">
-                                        <i class="ti ti-clear-formatting ti-sm me-2 mt-n2"></i>
-                                        فرمت:
-                                        {{ dataset.format }}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-language ti-sm me-2 mt-n2"></i>
-                                        زبان:
-                                       {{ dataset.language  }}
+                                        <i class="ti ti-box-multiple ti-sm me-2 mt-n2"></i>
+                                        تعداد فایل:
+                                        {% if dataset.filesCount %} {{ dataset.filesCount }} {% else %} - {% endif %}
                                     </p>
                                     <p class="text-nowrap">
                                         <i class="ti ti-calendar ti-sm me-2 mt-n2"></i>
                                         تاریخ ایجاد:
-                                        {{ dataset.created|to_jalali_s }}
+                                        {% if dataset.created %} {{ dataset.created|to_jalali_s }} {% else %} - {% endif %}
                                     </p>
                                 </div>
                                 <div>
                                     <p class="text-nowrap">
                                         <i class="ti ti-table-filled ti-sm me-2 mt-n2"></i>
                                         تعداد رکورد:
-                                        {{ dataset.recordsNum }}
+                                        {% if dataset.recordsNum %} {{ dataset.recordsNum }} {% else %} - {% endif %}
                                     </p>
                                     <p class="text-nowrap">
                                         <i class="ti ti-license ti-sm me-2 mt-n2"></i>
                                         لایسنس:
-                                        {{ dataset.license}}
+                                        {% if dataset.license %} {{ dataset.license }} {% else %} - {% endif %}
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-clear-formatting ti-sm me-2 mt-n2"></i>
+                                        فرمت:
+                                        {% if dataset.format %} {{ dataset.format }} {% else %} - {% endif %}
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-language ti-sm me-2 mt-n2"></i>
+                                        زبان:
+                                        {% if dataset.language %} {{ dataset.language }} {% else %} - {% endif %}
                                     </p>
                                 </div>
                             </div>
+                            {% if dataset.refLink %}
+                                <p class="text-nowrap">
+                                    <i class="ti ti-link ti-sm me-2 mt-n2"></i>
+                                    لینک مرجع :
+                                <a target="_blank" href="{{ dataset.refLink }}" > {{ dataset.refLink }} </a>
+                                </p>
+                            {% endif %}
 
-                            <hr class="mb-4 mt-2"/>
-                            <h5>توضیحات</h5>
-                            {% if dataset.language == 'en' %}
-                                <p class="mb-0 pt-1" style="text-align: left">{{ dataset.desc }}</p>
-                            {% else %}
-                                <p class="mb-0 pt-1" >{{ dataset.desc }}</p>
+                            {% if dataset.dataType == 'Text' %}
+                                <a class="h5" target="_blank" href="{% url 'dataset:dataset_viewer_fa' %}?dataset_id={{ dataset.id }}">
+                                   <button  class="btn btn-secondary btn-sm" > نمایش اطلاعات توصیفی</button>
+                                </a>
                             {% endif %}
 
                             <hr class="mb-4 mt-2"/>
-                            <h5>دیتاویور</h5>
-
-
-                            <a class="h5" href="{% url 'dataset:dataset_viewer_fa' %}?dataset_id={{ dataset.id }}">
-                               نمایش اطلاعات توصیفی
-                            </a>
+                            <h5>توضیحات</h5>
+                            {% if dataset.language == 'fa' %}
+                                <pre class="mb-0 pt-1" style="text-align: right; direction: rtl">{{ dataset.desc }}</pre>
+                            {% else %}
+                                <pre class="mb-0 pt-1" style="text-align: left; direction: ltr">{{ dataset.desc }}</pre>
+                            {% endif %}
 
                             <hr class="my-4"/>
                             <h5>ساختار دیتاست</h5>
                             <div class="d-flex justify-content-start align-items-center user-name">
-                                <code id="json_viewer" style="direction: ltr; text-align: left"> {{ dataset.columnDataType }}</code>
+                                <code id="json_viewer" style="direction: ltr; text-align: left"> {% if dataset.columnDataType %}{{ dataset.columnDataType }}{% endif %} </code>
                             </div>
 
                              <hr class="my-4"/>
@@ -132,7 +157,6 @@
                                                                 </div>
                                                                 <div class="chat-contact-info flex-grow-1 ms-2">
                                                                     <h6 class="m-0">{{ comment.user.username }}</h6>
-                                                                    <small class="user-status text-muted">توسعه دهنده NextJS</small>
                                                                 </div>
                                                             </div>
 
@@ -141,7 +165,7 @@
                                                                     <p class="mb-0">{{ comment.text }}</p>
                                                                 </div>
                                                                 <div class="text-muted mt-1">
-                                                                    <small>{{ comment.Date}}</small>
+                                                                    <small>{{ comment.Date|to_jalali_s}}</small>
                                                                 </div>
                                                             </div>
                                                         </li>
@@ -177,14 +201,19 @@
                     <div class="row mt-3">
                         <div class="d-grid gap-2 col-lg-12 mx-auto">
                             {% if request.user.is_authenticated %}
+
                                 {% if dataset.requestRequired == 'Yes' %}
                                     <form  method="post" >
-                                    {% csrf_token %}
-                                        <button name="submit_dataset_request" class="btn btn-primary btn-lg" type="submit">ثبت درخواست</button>
+                                        {% csrf_token %}
+                                        <button name="submit_dataset_request" class="btn btn-primary btn-lg" type="submit"> ثبت درخواست دریافت/خرید دیتاست</button>
                                     </form>
                                 {% else %}
-                                    <button class="btn btn-primary btn-lg" type="button">دانلود</button>
+                                    <a class="h5" href="{% url "dataset:dataset_download_fa" pk=dataset.id %}">
+                                        <button name="submit_dataset_download" class="btn btn-primary btn-lg" >دریافت/خرید دیتاست</button>
+                                    </a>
+
                                 {% endif %}
+
                             {% endif %}
                         </div>
                     </div>
@@ -212,7 +241,7 @@
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
                                                   <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
-                                                  <span class="text-muted d-block">{{ product.productDate }}</span>
+                                                  <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
                                               </label>
                                             </div>
                                         </div>
@@ -242,7 +271,7 @@
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
                                                     <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
-                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
+                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
                                               </label>
                                             </div>
                                         </div>
@@ -272,7 +301,7 @@
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
                                                     <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
-                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
+                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
                                               </label>
                                             </div>
                                         </div>
@@ -302,7 +331,7 @@
                                               </div>
                                               <label class="form-check-label ms-3" for="defaultCheck1">
                                                     <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
-                                                    <span class="text-muted d-block">{{ product.productDate }}</span>
+                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
                                               </label>
                                             </div>
                                         </div>

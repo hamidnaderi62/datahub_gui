@@ -99,12 +99,12 @@ def profile_product_fa(request):
         product_title = request.POST.get('product_title')
         product_type = request.POST.get('product_type')
         product_link = request.POST.get('product_link')
-        # product_productDate = request.POST.get('product_productDate')
+        product_productDate = datetime.now()
         product_image = request.FILES.get('product_image')
         product_desc = request.POST.get('product_desc')
 
         dataset = Dataset.objects.get(id=dataset_id)
-        Product.objects.create(dataset=dataset, title=product_title, type=product_type, link=product_link, desc=product_desc, image=product_image)
+        Product.objects.create(dataset=dataset, title=product_title, type=product_type, link=product_link, desc=product_desc, image=product_image, productDate=product_productDate)
 
     all_datasets = Dataset.objects.all().values('id', 'name').order_by('name')
     print(all_datasets)
@@ -126,5 +126,16 @@ def profile_marketplace_fa(request):
     return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})
 
+
+from django.shortcuts import render
+from django.core.exceptions import PermissionDenied
+
+
+def custom_permission_denied(request, exception=None):
+    return render(request, 'account/403_fa.html', status=403)
+
+
+def custom_page_not_found(request, exception=None):
+    return render(request, 'account/404_fa.html', status=404)
 
 

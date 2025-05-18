@@ -11,6 +11,8 @@ urlpatterns = [
     path('dataset_detail_fa/<int:pk>', views.dataset_detail_fa, name="dataset_detail_fa"),
     path('dataset_like_fa/<int:pk>', views.dataset_like_fa, name="dataset_like_fa"),
 
+    path('dataset_download_fa/<int:pk>', views.dataset_download_fa, name="dataset_download_fa"),
+
     path('predefined_tags/', views.predefined_tags, name="predefined_tags"),
     path('dataset_new_stepper_fa', views.dataset_new_stepper_fa, name="dataset_new_stepper_fa"),
     path('dataset_define_stepper_fa', views.dataset_define_stepper_fa, name="dataset_define_stepper_fa"),
@@ -42,6 +44,8 @@ urlpatterns = [
     path('dataset_annotation_list_fa', views.dataset_annotation_list_fa, name="dataset_annotation_list_fa"),
 
     path('dataset_annotation_record_fa/<int:pk>', views.dataset_annotation_record_fa, name="dataset_annotation_record_fa"),
+
+    path('download_file_from_cloud', views.download_file_from_cloud, name='download_file_from_cloud'),
 
 
 ]

@@ -1,0 +1,201 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+{% load social_share %}
+{% load my_filters %}
+
+<!-- Chat Vendors CSS -->
+<link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
+<link href="{% static 'vendor/libs/bootstrap-maxlength/bootstrap-maxlength.css' %}" rel="stylesheet"/>
+<!-- Page CSS -->
+<link href="{% static 'vendor/css/pages/app-chat.css' %}" rel="stylesheet"/>
+
+{% block content %}
+<!-- Sections:Start -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="card g-3 mt-5">
+            <div class="card-body row g-3">
+                <div class="col-lg-12">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2 gap-1">
+                        <div class="me-1">
+                            <h5 class="mb-1">{{ dataset.name }}</h5>
+                            <p class="mb-1">مالک:
+                                <span class="fw-medium"> {{ dataset.owner}}</span>
+                            </p>
+                        </div>
+
+
+                        <div class="d-flex align-items-center">
+                            <div>
+                                {% for tag in dataset.dataset_tags|split_by:','  %}
+                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="card academy-content shadow-none border">
+                        <div class="p-2">
+                            <div class="cursor-pointer">
+
+                            </div>
+                        </div>
+                        <div class="card-body">
+
+                            <h5>جزئیات</h5>
+                            <div class="d-flex flex-wrap">
+                                <div class="me-5">
+                                    <p class="text-nowrap"  >
+                                        <i class="ti ti-database-plus ti-sm me-2 mt-n2"></i>
+                                        مرجع:
+                                        <span style="direction: ltr">
+                                           {% if dataset.referenceOwner %}
+                                                <img src="{% static 'logo/' %}{{ dataset.referenceOwner }}.png" style="width: 50px;" alt="logo" />
+                                           {% else %}
+                                                <img src="{% static 'logo/datahub.png' %}" style="width: 50px;" alt="logo" />
+                                           {% endif %}
+                                        </span>
+                                    </p>
+                                    <p class="text-nowrap"  >
+                                        <i class="ti ti-file ti-sm me-2 mt-n2"></i>
+                                        حجم:
+                                        <span style="direction: ltr">
+                                            {% if dataset.size %}  {{ dataset.size | filesizeformat }}  {% else %} - {% endif %}
+                                        </span>
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-language ti-sm me-2 mt-n2"></i>
+                                        زبان:
+                                        {% if dataset.language %} {{ dataset.language }} {% else %} - {% endif %}
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-calendar ti-sm me-2 mt-n2"></i>
+                                        تاریخ ایجاد:
+                                        {% if dataset.created %} {{ dataset.created|to_jalali_s }} {% else %} - {% endif %}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-table-filled ti-sm me-2 mt-n2"></i>
+                                        تعداد رکورد:
+                                        {% if dataset.recordsNum %} {{ dataset.recordsNum }} {% else %} - {% endif %}
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-license ti-sm me-2 mt-n2"></i>
+                                        لایسنس:
+                                        {% if dataset.license %} {{ dataset.license }} {% else %} - {% endif %}
+                                    </p>
+                                    <p class="text-nowrap">
+                                        <i class="ti ti-clear-formatting ti-sm me-2 mt-n2"></i>
+                                        فرمت:
+                                        {% if dataset.format %} {{ dataset.format }} {% else %} - {% endif %}
+                                    </p>
+
+                                </div>
+                            </div>
+
+
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Content -->
+        <div class="container-xxl flex-grow-1 container-p-y">
+            <div class="row">
+                <!-- Assignment Progress -->
+                <div class="col-md-6 col-xl-12 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header d-flex align-items-center justify-content-between">
+                            <h5 class="card-title m-0 me-2">دانلود فایل های دیتاست</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="p-0 m-0">
+                                {% for file in dataset.downloadLink %}
+                                    <li class="d-flex mb-3 pb-1">
+                                        <div class="row w-100 align-items-center">
+                                            <div class="col-9">
+                                                <div class="me-2">
+                                                     <h6 class="mb-2">{{ file.url|basename }}</h6>
+                                                    <small class="text-muted">{{ file.size_human }}</small>
+                                                    <a href="#"
+                                                       class="download-link btn btn-sm btn-primary mt-2"
+                                                       data-url="{% url 'dataset:download_file_from_cloud' %}?file_url={{ file.url|urlencode }}"
+                                                       data-progress-id="progress-{{ forloop.counter }}">
+                                                        <i class="ti ti-download me-1"></i> دانلود
+                                                    </a>
+                                                    <div class="progress mt-2 d-none" id="progress-bar-{{ forloop.counter }}">
+                                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <!--/ Assignment Progress -->
+            </div>
+        </div>
+        <!--/ Content -->
+    </div>
+<!-- / Sections:End -->
+
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.download-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const downloadUrl = this.getAttribute('data-url');
+                const progressId = this.getAttribute('data-progress-id');
+                const progressBar = document.getElementById('progress-bar-' + progressId.split('-')[1]);
+
+                // Show progress bar
+                progressBar.classList.remove('d-none');
+                const innerBar = progressBar.querySelector('.progress-bar');
+
+                // Start download
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', downloadUrl, true);
+                xhr.responseType = 'blob';
+
+                xhr.onprogress = function(event) {
+                    if (event.lengthComputable) {
+                        const percentComplete = (event.loaded / event.total) * 100;
+                        innerBar.style.width = percentComplete + '%';
+                        innerBar.textContent = Math.round(percentComplete) + '%';
+                    }
+                };
+
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        const blob = xhr.response;
+                        const filename = downloadUrl.split('/').pop().split('?')[0];
+                        const a = document.createElement('a');
+                        a.href = window.URL.createObjectURL(blob);
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+
+                    }
+                };
+
+                xhr.onerror = function() {
+                    progressBar.classList.add('d-none');
+                    alert('Download failed. Please try again.');
+                };
+
+                xhr.send();
+            });
+        });
+    });
+    </script>
+
+{% endblock %}

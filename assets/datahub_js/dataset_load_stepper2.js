@@ -1,5 +1,5 @@
 let dt_data;
-let anonymized_data;
+
 //************************************************
 // Step 2
 // Load csv
@@ -157,7 +157,8 @@ function generateColMetaData() {
             var desc = document.getElementsByName("group-a[" + i + "][col_desc]")[0].value
             var di_type = document.getElementsByName("group-a[" + i + "][col_di_type]")[0].value
             //var di_status = '<img alt="User" class="rounded-circle" src="{% static \'svg/flags/fr.svg" width="32">'
-            const col = {'name': name, 'dtype': dtype, 'desc': desc, 'di_type': di_type};
+            var di_status = '<button class="btn btn-primary" type="button">کمنام سازی</button>'
+            const col = {'name': name, 'dtype': dtype, 'desc': desc, 'di_type': di_type, 'di_status': di_status};
             cols.push(col)
         }
     }
@@ -170,6 +171,7 @@ function generateColMetaData() {
             {data: 'dtype'},
             {data: 'desc'},
             {data: 'di_type'},
+            {data: 'di_status'}
         ]
     });
 }
@@ -181,6 +183,7 @@ $('#tb_metadata').DataTable({
         {data: 'dtype'},
         {data: 'desc'},
         {data: 'di_type'},
+        {data: 'di_status'}
     ],
     layout: {
         topStart: {
@@ -206,7 +209,7 @@ $('#tb_metadata').DataTable({
 });
 
 //**************************************************
-// De-Identification
+// De Identification
 //**************************************************
 
 function de_identification_dataset() {
@@ -227,8 +230,6 @@ function de_identification_dataset() {
         }
     }
     output_dataset = input_dataset;
-    anonymized_data = output_dataset
-    anonymized_datatable(anonymized_data)
     console.log(output_dataset);
     //console.log(anonymizeJson(dt_data));
 }
@@ -354,18 +355,18 @@ function replaceAllWithMax(data, column) {
 //**************************************************
 // NER Anonymize - Solution 1
 
-function replaceAllWithNER(data, column) {
+function replaceAllWithNER1(data, column) {
     return data.map(item => ({
         ...item,
-        [column]: applyNERTags(item[column]) // Replace with standardized tags
+        [column]: applyNERTags1(item[column]) // Replace with standardized tags
     }));
 }
 
-function applyNERTags(text) {
+function applyNERTags1(text) {
     if (typeof text !== "string") return text; // Skip non-strings
 
- // English NER patterns (unchanged)
-    let result = text
+    // Apply NER replacements in priority order (e.g., email before generic names)
+    return text
         .replace(/\b[\w.-]+@[\w.-]+\.\w+\b/g, '[EMAIL]') // Emails
         .replace(/(\+\d{1,3}[- ]?)?(\(\d{3}\)[- ]?|\d{3}[- ]?)\d{3}[- ]?\d{4}\b/g, '[PHONE]') // Phone numbers
         .replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]') // IPv4 addresses
@@ -373,72 +374,145 @@ function applyNERTags(text) {
         .replace(/\b(?:\d[ -]*?){13,16}\b/g, '[CREDIT_CARD]') // Credit cards
         .replace(/\b[A-Z][a-z]+ [A-Z][a-z]+\b/g, '[NAME]') // Full names (e.g., "John Doe")
         .replace(/\b\d+ [A-Za-z]+,? [A-Za-z]+,? [A-Z]{2}\b/g, '[ADDRESS]'); // Simple addresses (e.g., "123 Main St, New York, NY")
-
-    // Persian NER patterns
-    result = result
-        // Persian names (matches common name patterns)
-        .replace(/[\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,})+/g, '[NAME_FA]')
-        // Persian phone numbers (09XXXXXXXXX or +98...)
-        .replace(/(\+98|\u06F9\u06F8|\u06F9)[\s\u200C\-]?(\d[\s\u200C\-]?){10}/g, '[PHONE_FA]')
-        // Iranian national ID (10 digits)
-        .replace(/\b\d{10}\b/g, '[NATIONAL_ID_IR]')
-        // Persian addresses (simple pattern)
-        .replace(/[\u0600-\u06FF]+\s+[\u0600-\u06FF]+,\s*[\u0600-\u06FF]+/g, '[ADDRESS_FA]')
-        // Dates in Persian format (1402/05/15)
-        .replace(/\b\d{4}\/\d{2}\/\d{2}\b/g, '[DATE_FA]');
-
-    return result;
 }
 
+//**************************************************
+// NER Anonymize - Solution 2
+
+
+// Define your custom NER tags and regex patterns
+const NER_RULES = [
+    {tag: '[EMAIL]', pattern: /\b[\w.-]+@[\w.-]+\.\w+\b/g},
+    {tag: '[PHONE]', pattern: /(\+\d{1,3}[- ]?)?(\(\d{3}\)[- ]?|\d{3}[- ]?)\d{3}[- ]?\d{4}\b/g},
+    {tag: '[IP]', pattern: /\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g},
+    {tag: '[SSN]', pattern: /\b\d{3}-\d{2}-\d{4}\b/g},
+    {tag: '[CREDIT_CARD]', pattern: /\b(?:\d[ -]*?){13,16}\b/g},
+    {tag: '[NAME]', pattern: /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g},
+    {tag: '[ADDRESS]', pattern: /\b\d+ [A-Za-z]+,? [A-Za-z]+,? [A-Z]{2}\b/g},
+    // Add your custom rules here:
+    {tag: '[DATE]', pattern: /\b\d{2}\/\d{2}\/\d{4}\b/g},  // Dates (MM/DD/YYYY)
+    {tag: '[URL]', pattern: /\bhttps?:\/\/[^\s]+\b/g},       // URLs
+];
+
+function replaceAllWithNER(data, column) {
+    let ner_data = data.map(item => ({
+        ...item,
+        [column]: applyNERTags(item[column])
+    }));
+
+    return ner_data.map(item => ({
+        ...item,
+        [column]: applyNERTagsWithML(item[column])
+    }));
+}
+
+function applyNERTags(text) {
+    if (typeof text !== "string") return text;
+    let anonymizedText = text;
+    NER_RULES.forEach(rule => {
+        anonymizedText = anonymizedText.replace(rule.pattern, rule.tag);
+    });
+    return anonymizedText;
+}
+
+
+import {nlp} from 'compromise';  // Lightweight NLP for browsers
+<script src="https://unpkg.com/compromise"></script>
+
+function applyNERTagsWithML(text) {
+    const doc = nlp(text);
+    // Replace people's names
+    doc.people().replaceWith('[NAME]');
+    // Replace organizations
+    doc.organizations().replaceWith('[ORG]');
+    return doc.text();
+}
+
+//**************************************************
+// NER Anonymize - Solution 3
+
+function replaceAllWithNER3(data, column) {
+    return data.map(item => ({
+        ...item,
+        [column]: anonymizeValue(column, item[column]) // Pass key-value pair
+    }));
+}
+
+function anonymizeValue(key, value) {
+    if (typeof value === "string") {
+        // Apply anonymization rules based on key or value patterns
+        if (/email/i.test(key) || /@.*\./.test(value)) {
+            return anonymizeEmail(value);
+        } else if (/phone|mobile|contact/i.test(key) || /(\+\d{1,3}[- ]?)?\d{3,4}[- ]?\d{3,4}[- ]?\d{4}/.test(value)) {
+            return anonymizePhone(value);
+        } else if (/card|credit|account/i.test(key) || /\d{4}[ -]?\d{4}[ -]?\d{4}[ -]?\d{4}/.test(value)) {
+            return anonymizeCard(value);
+        } else if (/ip/i.test(key) || /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(value)) {
+            return anonymizeIP(value);
+        } else if (/ssn|social|security/i.test(key) || /\d{3}-\d{2}-\d{4}/.test(value)) {
+            return anonymizeSSN(value);
+        } else if (/name|firstname|lastname/i.test(key)) {
+            return anonymizeName(value);
+        } else if (/address|street|city|state|zip/i.test(key)) {
+            return anonymizeAddress(value);
+        }
+    } else if (typeof value === "object" && value !== null) {
+        // Recursively anonymize nested objects/arrays
+        return anonymizeJson(value);
+    }
+    return value; // Return unchanged if no rules apply
+}
+
+// Recursive anonymization for nested structures
+function anonymizeJson(obj) {
+    if (Array.isArray(obj)) {
+        return obj.map(item => anonymizeValue("nested", item)); // "nested" as a dummy key
+    } else {
+        return Object.fromEntries(
+            Object.entries(obj).map(([key, value]) => [
+                key,
+                anonymizeValue(key, value) // Pass key-value pair
+            ])
+        );
+    }
+}
+
+// Enhanced Helper Functions
+function anonymizeEmail(email) {
+    return email.replace(/^(.)(.*)(@.*)$/, (_, first, middle, domain) =>
+        first + "*".repeat(Math.min(middle.length, 10)) + domain // Limit asterisks
+    );
+}
+
+function anonymizePhone(phone) {
+    return phone.replace(/\d(?=\d{4})/g, "*"); // Keep last 4 digits
+}
+
+function anonymizeCard(cardNumber) {
+    return cardNumber.replace(/\d(?=\d{4})/g, "*"); // Keep last 4 digits
+}
+
+function anonymizeIP(ip) {
+    return ip.replace(/(\d+\.\d+\.\d+)\.\d+/, "$1.***"); // Mask last octet
+}
+
+function anonymizeSSN(ssn) {
+    return ssn.replace(/\d(?=\d{4})/g, "*"); // Keep last 4 digits
+}
+
+function anonymizeName(name) {
+    return name.replace(/\b\w/g, match => match + "."); // Convert "John Doe" to "J. D."
+}
+
+function anonymizeAddress(address) {
+    return address.replace(/\d+/g, "***"); // Mask all numbers
+}
 
 //************************************************
 // Step 5
-// Show De-Identified Data Table
-//************************************************
-function anonymized_datatable(anonymized_data) {
-    var adColumns = [];
-    Object.keys(anonymized_data[0]).forEach(key => {
-        var col = {
-            data: key,
-            title: key
-        };
-        adColumns.push(col);
-    });
-
-    var tb_anonymized_container = document.getElementById('tb_anonymized_container');
-    tb_anonymized_container.innerHTML = '<table class="datatables-basic table" id="tb1_anonymized"></table>';
-    console.log(adColumns);
-
-    $('#tb1_anonymized').DataTable({
-        data: anonymized_data,
-        columns: adColumns,
-        layout: {
-            topStart: {
-                buttons: [
-                    {
-                        extend: 'csv',
-                        text: 'Export CSV',
-                        className: 'btn-space',
-                        exportOptions: {
-                            orthogonal: null
-                        }
-                    },
-                    {
-                        extend: 'selectAll',
-                        className: 'btn-space'
-                    },
-                    'selectNone'
-                ]
-            }
-        },
-        select: true
-    });
-}
-
-//************************************************
-// Step 6
 // Insert Dataset Metadata to DB
 //************************************************
+
 function checkTempMetaData() {
     let question_verify = $('#question_verify').is(':checked');
     if (question_verify) {

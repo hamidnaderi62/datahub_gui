@@ -12,6 +12,7 @@ class Profile(models.Model):
     site = models.TextField(blank=True, null=True)
     bio = models.TextField(blank=True, null=True)
     profile_tags = models.TextField(blank=True, null=True)
+
     def __str__(self):
         return self.user.username
 

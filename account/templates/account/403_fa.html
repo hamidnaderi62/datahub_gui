@@ -1,0 +1,28 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+
+
+{% block content %}
+
+<!-- Content -->
+<!-- Not Authorized -->
+<div class="container-xxl container-p-y">
+    <div class="misc-wrapper">
+        <h2 class="mb-3 mx-2">عدم دسترسی!</h2>
+        <p class="mb-4 mx-2"> شما مجوز مشاهده این صفحه را ندارید چون این دسترسی برای شما تعریف نشده است.
+            <br/>
+            لطفا با مدیر سایت تماس بگیرید.
+        </p>
+        <a class="btn btn-primary mb-4" href="index.html">بازگشت به خانه</a>
+        <div class="mt-4">
+            <img alt="صفحه-متفرقه-مجاز نیست" class="img-fluid" src="{% static 'img/illustrations/page-misc-you-are-not-authorized.png' %}" width="170"/>
+        </div>
+    </div>
+</div>
+<div class="container-fluid misc-bg-wrapper">
+    <img alt="صفحه-متفرقه-مجاز نیست" data-app-dark-img="illustrations/bg-shape-image-dark.png" data-app-light-img="illustrations/bg-shape-image-light.png" src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
+</div>
+<!-- /Not Authorized -->
+<!-- / Content -->
+
+{% endblock %}

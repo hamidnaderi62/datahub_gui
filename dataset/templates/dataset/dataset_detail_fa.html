@@ -126,15 +126,17 @@
                             <hr class="mb-4 mt-2"/>
                             <h5>توضیحات</h5>
                             {% if dataset.language == 'fa' %}
-                                <pre class="mb-0 pt-1" style="text-align: right; direction: rtl">{{ dataset.desc }}</pre>
+                                <span class="mb-0 pt-1 text-wrap" style="text-align: right; direction: rtl">{{ dataset.desc }}</span>
                             {% else %}
-                                <pre class="mb-0 pt-1" style="text-align: left; direction: ltr">{{ dataset.desc }}</pre>
+                                <span class="mb-0 pt-1 text-wrap" style="text-align: left; direction: ltr">{{ dataset.desc }}</span>
                             {% endif %}
 
-                            <hr class="my-4"/>
-                            <h5>ساختار دیتاست</h5>
+                            <hr class="my-3 my-md-4">
+                            <h5 class="text-start">ساختار دیتاست</h5>
                             <div class="d-flex justify-content-start align-items-center user-name">
-                                <code id="json_viewer" style="direction: ltr; text-align: left"> {% if dataset.columnDataType %}{{ dataset.columnDataType }}{% endif %} </code>
+                                <code id="json_viewer" class="w-100 overflow-auto p-2 bg-light rounded" style="direction: ltr; text-align: left; white-space: pre-wrap; word-break: break-word; font-size: 0.875rem;">
+                                    {% if dataset.columnDataType %}{{ dataset.columnDataType }}{% endif %}
+                                </code>
                             </div>
 
                              <hr class="my-4"/>

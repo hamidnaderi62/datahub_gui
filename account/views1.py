@@ -7,98 +7,9 @@ from .models import User, Profile
 from dataset.models import Dataset, Product, Comment, Request
 from django.core.paginator import Paginator
 from datetime import datetime
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth import get_user_model
-from django.utils.crypto import get_random_string
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.template.loader import render_to_string
 
 
-User = get_user_model()
-
-
-def user_register_fa(request):
-    context = {'errors': []}
-    if request.user.is_authenticated:
-        return redirect('home:home_fa')
-
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-
-        if password1 != password2:
-            context['errors'].append('کلمه های عبور یکسان نمی باشند')
-            return render(request, 'account/register_fa.html', context)
-
-        if User.objects.filter(username=username).exists():
-            context['errors'].append('نام کاربری تکراری می باشد')
-            return render(request, 'account/register_fa.html', context)
-
-        if User.objects.filter(email=email).exists():
-            context['errors'].append('این ایمیل قبلا ثبت شده است')
-            return render(request, 'account/register_fa.html', context)
-
-        # Create user but set is_active=False until email is verified
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password1,
-            is_active=False
-        )
-
-        # Generate verification token
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
-
-        # Create verification link
-        verification_url = request.build_absolute_uri(
-            f'/verify-email/{uid}/{token}/'
-        )
-
-        # Send verification email
-        subject = 'تایید ایمیل'
-        message = render_to_string('account/verify_email_fa.html', {
-            'user': user,
-            'verification_url': verification_url,
-        })
-
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [email],
-            fail_silently=False,
-            html_message=message
-        )
-
-        # Redirect to a page explaining that verification email has been sent
-        return redirect('account:verification_sent_fa')
-
-    return render(request, 'account/register_fa.html', context)
-
-
-def verify_email_fa(request, uidb64, token):
-    try:
-        uid = force_str(urlsafe_base64_decode(uidb64))
-        user = User.objects.get(pk=uid)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
-        user = None
-
-    if user is not None and default_token_generator.check_token(user, token):
-        user.is_active = True
-        user.save()
-        login(request, user)
-        return redirect('account:verification_success_fa')
-    else:
-        return redirect('account:verification_failed_fa')
-
-
-def user_login_fa1(request):
+def user_login_fa(request):
     if request.user.is_authenticated:
         return redirect('home:home_fa')
     if request.method == "POST":
@@ -111,34 +22,12 @@ def user_login_fa1(request):
     return render(request, 'account/login_fa.html', context={})
 
 
-def user_login_fa(request):
-    context = {'errors': []}
-    if request.user.is_authenticated:
-        return redirect('home:home_fa')
-
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-
-        if user is not None:
-            if user.is_active:
-                login(request, user)
-                return redirect('home:home_fa')
-            else:
-                context['errors'].append('حساب کاربری شما فعال نیست. لطفا ایمیل خود را تایید کنید.')
-        else:
-            context['errors'].append('نام کاربری یا کلمه عبور اشتباه است')
-
-    return render(request, 'account/login_fa.html', context)
-
-
 def user_logout_fa(request):
     logout(request)
     return redirect('home:home_fa')
 
 
-def user_register_fa1(request):
+def user_register_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
         return redirect('home:home_fa')
@@ -237,6 +126,9 @@ def profile_marketplace_fa(request):
     return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})
 
+
+from django.shortcuts import render
+from django.core.exceptions import PermissionDenied
 
 
 def custom_permission_denied(request, exception=None):

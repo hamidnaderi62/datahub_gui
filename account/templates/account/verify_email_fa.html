@@ -1,14 +1,14 @@
 {% load static %}
 <!DOCTYPE html>
-<html class="light-style layout-wide customizer-hide" data-assets-path="" data-template="vertical-menu-template" data-theme="theme-default" dir="rtl" lang="fa">
+<html class="light-style layout-wide customizer-hide" data-assets-path="{% static '" data-template="horizontal-menu-template-no-customizer' %}" data-theme="theme-default" dir="rtl" lang="fa">
 
 <head>
     <meta charset="UTF-8"/>
     <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
-    <title>ورود</title>
+    <title>صفحات - تأیید ایمیل | Vuexy - قالب مدیریت بوت استرپ</title>
     <meta content="" name="description"/>
     <!-- Favicon -->
-    <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon' %}"/>
+    <link href="{% static 'img/favicon/favicon.ico' %}" rel="icon" type="image/x-icon"/>
     <!-- Icons -->
     <link href="{% static 'vendor/fonts/fontawesome.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/fonts/tabler-icons.css' %}" rel="stylesheet"/>
@@ -21,16 +21,12 @@
     <link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
     <link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
-    <!-- Vendor -->
-    <link href="{% static 'vendor/libs/@form-validation/form-validation.css' %}" rel="stylesheet"/>
     <!-- Page CSS -->
     <!-- Page -->
     <link href="{% static 'vendor/css/pages/page-auth.css' %}" rel="stylesheet"/>
     <!-- Helpers -->
     <script src="{% static 'vendor/js/helpers.js' %}"></script>
-    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
-    <!--? Template customizer: To hide customizer set displayCustomizer value false in config.js.  -->
-    <script src="{% static 'vendor/js/template-customizer.js' %}"></script>
+
     <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
     <script src="{% static 'js/config.js' %}"></script>
     <!-- Better experience of RTL -->
@@ -44,15 +40,14 @@
         <!-- /Left Text -->
         <div class="d-none d-lg-flex col-lg-7 p-0">
             <div class="auth-cover-bg auth-cover-bg-color d-flex justify-content-center align-items-center">
-                <img alt="auth-login-cover" class="img-fluid my-5 auth-illustration"  src="{% static 'img/illustrations/auth-login-illustration-light.png' %}"/>
-                <img alt="auth-login-cover" class="platform-bg"  src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
+                <img alt="auth-verify-email-cover" class="img-fluid my-5 auth-illustration" data-app-dark-img="illustrations/auth-verify-email-illustration-dark.png" data-app-light-img="illustrations/auth-verify-email-illustration-light.png" src="{% static 'img/illustrations/auth-verify-email-illustration-light.png' %}"/>
+                <img alt="auth-verify-email-cover" class="platform-bg" data-app-dark-img="illustrations/bg-shape-image-dark.png" data-app-light-img="illustrations/bg-shape-image-light.png" src="{% static 'img/illustrations/bg-shape-image-light.png' %}"/>
             </div>
         </div>
         <!-- /Left Text -->
-        <!-- Login -->
-        <div class="d-flex col-12 col-lg-5 align-items-center p-sm-5 p-4">
+        <!--  Verify email -->
+        <div class="d-flex col-12 col-lg-5 align-items-center p-4 p-sm-5">
             <div class="w-px-400 mx-auto">
-                <!-- Logo -->
                 <div class="app-brand mb-4">
                     <a class="app-brand-link gap-2" href="index.html">
                         <span class="app-brand-logo demo">
@@ -65,55 +60,15 @@
                         </span>
                     </a>
                 </div>
-                <!-- /Logo -->
-                <h3 class="mb-1">به دیتاهاب خوش آمدید! 👋</h3>
-                <p class="mb-4"></p>
-                <form method="POST"  class="mb-3" id="formAuthentication">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label" for="email">ایمیل یا نام کاربری</label>
-                        <input autofocus class="form-control" id="username" name="username" placeholder="ایمیل یا نام کاربری خود را وارد کنید" type="text"/>
-                    </div>
-                    <div class="mb-3 form-password-toggle">
-                        <div class="d-flex justify-content-between">
-                            <label class="form-label" for="password">رمز عبور</label>
-                            <a href="auth-forgot-password-cover.html">
-                                <small>رمز عبور را فراموش کرده اید؟</small>
-                            </a>
-                        </div>
-                        <div class="input-group input-group-merge">
-                            <input aria-describedby="password" class="form-control" id="password" name="password" placeholder="············" type="password"/>
-                            <span class="input-group-text cursor-pointer">
-                                <i class="ti ti-eye-off"></i>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" id="remember-me" type="checkbox"/>
-                            <label class="form-check-label" for="remember-me"> مرا به خاطر بسپار</label>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary d-grid w-100">ورود</button>
-                </form>
-                <p class="text-center">
-                    <span>حساب کاربری ندارید؟</span>
-                    <a href="{% url 'account:register_fa' %}">
-                        <span>ثبت نام</span>
-                    </a>
+                <h4 class="mb-1">تایید ایمیل ✉️</h4>
+                <p class="text-start mb-4"> لینک فعال سازی حساب به ادرس ایمیل شما : hello@example.com ارسال می شود و باید روی لینک کلیک کنید تا تایید گردد.</p>
+                <a class="btn btn-primary w-100 mb-3" href="index.html"> بعدا انجام میدم</a>
+                <p class="text-center"> ایمیل ارسال نشد؟
+                    <a href="javascript:void(0);"> ارسال مجدد</a>
                 </p>
-                {% if errors %}
-                    <div class="card-body">
-                    {%  for error in errors %}
-                        <div class="alert alert-danger alert-dismissible" role="alert">{{ error }}
-                            <button aria-label="بستن" class="btn-close" data-bs-dismiss="alert" type="button"></button>
-                        </div>
-                    {% endfor %}
-                    </div>
-                {% endif %}
             </div>
         </div>
-        <!-- /Login -->
+        <!-- / Verify email -->
     </div>
 </div>
 <!-- / Content -->
@@ -130,13 +85,9 @@
 <script src="{% static 'vendor/js/menu.js' %}"></script>
 <!-- endbuild -->
 <!-- Vendors JS -->
-<script src="{% static 'vendor/libs/@form-validation/popular.js' %}"></script>
-<script src="{% static 'vendor/libs/@form-validation/bootstrap5.js' %}"></script>
-<script src="{% static 'vendor/libs/@form-validation/auto-focus.js' %}"></script>
 <!-- Main JS -->
 <script src="{% static 'js/main.js' %}"></script>
 <!-- Page JS -->
-<script src="{% static 'js/pages-auth.js' %}"></script>
 </body>
 
 </html>

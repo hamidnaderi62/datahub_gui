@@ -5,7 +5,6 @@ from django.urls import reverse
 from django.core.paginator import Paginator
 from django.core.files.storage import default_storage
 from django.contrib.auth.decorators import login_required
-
 import pandas as pd
 from fastparquet import ParquetFile
 import pygwalker as pyg
@@ -24,27 +23,9 @@ from django.views.generic import TemplateView
 from django.utils.safestring import mark_safe
 
 
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
-
-MODEL_PATH = "assets/models/sentiments/HooshvareLab"
-
-# Cache model and tokenizer to avoid redundant loading
-_model, _tokenizer, _pipeline = None, None, None
-
-def load_model():
-    global _model, _tokenizer, _pipeline
-    if _pipeline is None:  # Load the model only if it's not already loaded
-        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-        _pipeline = pipeline("sentiment-analysis", model=_model, tokenizer=_tokenizer)
-    return _pipeline
-
-def analyze_sentiment(comment):
-    sentiment_pipeline = load_model()
-    result = sentiment_pipeline(comment)[0]
-    return result["label"], round(result["score"], 2)
 
 
+# Get
 def dataset_list_fa(request):
     q = request.GET.get('q')
     if q is not None:
@@ -577,7 +558,7 @@ def get_user_container_name(user):
 
     # Generate SHA256 hash of the combined string
     combined_hash = hashlib.sha256(combined_string.encode()).hexdigest()[:16]
-    return f"user-{combined_hash}"
+    return combined_hash
 
 
 def create_user_container(user):
@@ -682,152 +663,6 @@ def upload_dataset(request):
 
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
-
-
-def finalize_upload1(request):
-    try:
-        upload_id = request.GET.get('uploadId')
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Invalid upload ID',
-                'code': 'INVALID_UPLOAD_ID',
-                'originalUploadId': upload_id if upload_id else None
-            }, status=400)
-
-        upload_info = upload_tracker[upload_id]
-        clean_upload_id = upload_id.split('-')[0]  # Extract timestamp part
-
-        # Verify all chunks were received
-        expected_chunks = set(range(upload_info['total_chunks']))
-        if upload_info['chunks_received'] != expected_chunks:
-            missing = expected_chunks - upload_info['chunks_received']
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Missing chunks: {sorted(missing)}',
-                'code': 'MISSING_CHUNKS',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id,
-                'received': sorted(upload_info['chunks_received']),
-                'expected': sorted(expected_chunks)
-            }, status=400)
-
-        # Reassemble file locally first
-        final_dir = os.path.join("uploads", datetime.now().strftime('%Y'),
-                                 datetime.now().strftime('%m'),
-                                 datetime.now().strftime('%d'))
-        final_path = os.path.join(final_dir, upload_info['file_name'])
-
-        try:
-            os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
-            with default_storage.open(final_path, 'wb') as final_file:
-                for i in range(upload_info['total_chunks']):
-                    chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
-                    with default_storage.open(chunk_path, 'rb') as chunk_file:
-                        final_file.write(chunk_file.read())
-        except Exception as assembly_error:
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'File assembly failed: {str(assembly_error)}',
-                'code': 'FILE_ASSEMBLY_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Create user container
-        container_success, container_result = create_user_container(request.user)
-        if not container_success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Container creation failed: {container_result}',
-                'code': 'CONTAINER_CREATION_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Upload to user's container
-        local_file_path = default_storage.path(final_path)
-        upload_success, upload_result = upload_to_user_container(
-            local_file_path,
-            container_result,
-            upload_info['file_name']
-        )
-
-        if not upload_success:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Cloud upload failed: {upload_result}',
-                'code': 'CLOUD_UPLOAD_FAILED',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id,
-                'container': container_result
-            }, status=500)
-        # Create database record
-        try:
-            with transaction.atomic():
-                metadata = upload_info['metadata']
-                dataset = Dataset.objects.create(
-                    user=request.user,
-                    code=container_result,
-                    name=metadata.get('dataset_name'),
-                    owner=metadata.get('dataset_owner'),
-                    language=metadata.get('dataset_language'),
-                    license=metadata.get('dataset_license'),
-                    format=metadata.get('dataset_format'),
-                    desc=metadata.get('dataset_desc'),
-                    dataset_tags=metadata.get('dataset_tags'),
-                    columnDataType=metadata.get('dataset_columnDataType'),
-                    downloadLink=upload_result,
-                    size=upload_info['file_size']
-                )
-
-                if metadata.get('dataset_tags'):
-                    tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
-                    dataset.tags.set(tags)
-        except Exception as db_error:
-            cleanup_upload(upload_id)
-            if default_storage.exists(final_path):
-                default_storage.delete(final_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Database error: {str(db_error)}',
-                'code': 'DATABASE_ERROR',
-                'originalUploadId': upload_id,
-                'cleanUploadId': clean_upload_id
-            }, status=500)
-
-        # Cleanup
-        cleanup_upload(upload_id)
-        if default_storage.exists(final_path):
-            default_storage.delete(final_path)
-
-        return JsonResponse({
-            'status': 'success',
-            'dataset_id': dataset.id,
-            'file_url': upload_result,
-            'file_size': upload_info['file_size'],
-            'metadata': metadata,
-            'originalUploadId': upload_id,
-            'cleanUploadId': clean_upload_id,
-            'container': container_result
-        })
-
-    except Exception as unexpected_error:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'Unexpected error: {str(unexpected_error)}',
-            'code': 'UNEXPECTED_ERROR',
-            'originalUploadId': request.GET.get('uploadId', 'unknown'),
-            'cleanUploadId': request.GET.get('uploadId', 'unknown').split('-')[0]
-        }, status=500)
 
 def finalize_upload(request):
     try:
@@ -1077,3 +912,28 @@ def download_file_from_cloud(request):
 
     except requests.exceptions.RequestException as e:
         return HttpResponseRedirect('/download-error/')
+
+
+###################################################
+# Load model for comment sentiment analyzer
+###################################################
+
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+
+MODEL_PATH = "assets/models/sentiments/HooshvareLab"
+
+# Cache model and tokenizer to avoid redundant loading
+_model, _tokenizer, _pipeline = None, None, None
+
+def load_model():
+    global _model, _tokenizer, _pipeline
+    if _pipeline is None:  # Load the model only if it's not already loaded
+        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+        _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+        _pipeline = pipeline("sentiment-analysis", model=_model, tokenizer=_tokenizer)
+    return _pipeline
+
+def analyze_sentiment(comment):
+    sentiment_pipeline = load_model()
+    result = sentiment_pipeline(comment)[0]
+    return result["label"], round(result["score"], 2)

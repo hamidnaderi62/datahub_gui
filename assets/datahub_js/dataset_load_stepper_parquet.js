@@ -1,6 +1,5 @@
 let dt_data;
 let anonymized_data;
-let uploaded_file_name;
 //************************************************
 // Step 1
 //
@@ -73,8 +72,6 @@ $(document).ready(function () {
     const my_file = document.getElementById('my_file1')
     if (my_file) {
         my_file.addEventListener("change", () => {
-            uploaded_file_name = my_file.files[0].name;
-            console.log(uploaded_file_name);
             read_csv_big(my_file);
         });
     }
@@ -528,6 +525,118 @@ const progressBar = document.getElementById('upload-progress');
 const progressText = document.getElementById('upload-progress-text');
 const uploadStatus = document.getElementById('upload-status');
 
+// Function to convert JSON to Parquet
+async function convertJsonToParquet1(jsonFile) {
+    updateProgress(0, 'Converting JSON to Parquet...');
+
+    try {
+        // Read the JSON file
+        const jsonData = await readFileAsText(jsonFile);
+        const jsonArray = JSON.parse(jsonData);
+
+        // Convert to Parquet (using parquetjs library)
+        const parquetBuffer = await jsonToParquet(jsonArray);
+
+        return new Blob([parquetBuffer], { type: 'application/octet-stream' });
+    } catch (error) {
+        console.error('Conversion error:', error);
+        throw new Error('Failed to convert JSON to Parquet');
+    }
+}
+
+async function convertJsonToParquet(jsonInput) {
+    updateProgress(0, 'Converting JSON to Parquet...');
+
+    try {
+        let jsonArray;
+
+        // Handle different input types
+        if (jsonInput instanceof File || jsonInput instanceof Blob) {
+            // If input is a File/Blob, read it
+            const jsonData = await readFileAsText(jsonInput);
+            jsonArray = JSON.parse(jsonData);
+        } else if (typeof jsonInput === 'string') {
+            // If input is a JSON string
+            jsonArray = JSON.parse(jsonInput);
+        } else if (typeof jsonInput === 'object') {
+            // If input is already a JavaScript object
+            jsonArray = Array.isArray(jsonInput) ? jsonInput : [jsonInput];
+        } else {
+            throw new Error('Invalid input type for JSON conversion');
+        }
+
+        // Convert to Parquet (using parquetjs library)
+        const parquetBuffer = await jsonToParquet(jsonArray);
+
+        return new Blob([parquetBuffer], { type: 'application/octet-stream' });
+    } catch (error) {
+        console.error('Conversion error:', error);
+        throw new Error('Failed to convert JSON to Parquet: ' + error.message);
+    }
+}
+
+// Helper function to read file as text
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+    });
+}
+
+// Function to convert JSON array to Parquet
+async function jsonToParquet(jsonArray) {
+    // Load parquetjs library dynamically
+    ////const parquetjs = await import('https://cdn.jsdelivr.net/npm/parquetjs@latest/+esm');
+    const parquetjs = await import('https://cdn.jsdelivr.net/npm/parquetjs@0.11.2/parquet.min.js');
+    await import('https://unpkg.com/parquetjs-lite@1.0.0-alpha.6/dist/parquet.js');
+
+    // Define schema (you may want to customize this based on your data)
+    const schema = inferSchemaFromJson(jsonArray[0]);
+
+    // Create a writer
+    const writer = await parquetjs.ParquetWriter.openStream(schema, {
+        useDataPageV2: true,
+        compression: 'GZIP'
+    });
+
+    // Write all records
+    for (const record of jsonArray) {
+        await writer.appendRow(record);
+    }
+
+    // Close the writer and get the buffer
+    return writer.close();
+}
+
+// Helper function to infer schema from JSON
+function inferSchemaFromJson(sampleObj) {
+    const schema = {};
+    for (const [key, value] of Object.entries(sampleObj)) {
+        schema[key] = inferFieldType(key, value);
+    }
+    return new parquet.ParquetSchema(schema);
+}
+
+function inferFieldType(key, value) {
+    if (typeof value === 'string') {
+        return { type: 'UTF8' };
+    } else if (typeof value === 'number') {
+        return { type: 'DOUBLE' };
+    } else if (typeof value === 'boolean') {
+        return { type: 'BOOLEAN' };
+    } else if (value instanceof Date) {
+        return { type: 'TIMESTAMP_MILLIS' };
+    } else if (Array.isArray(value)) {
+        return { type: 'JSON', repeated: true };
+    } else if (value === null || value === undefined) {
+        return { type: 'UTF8', optional: true }; // Default to string for nulls
+    } else {
+        return { type: 'JSON' }; // For nested objects
+    }
+}
+
 async function uploadChunk(file, chunkNumber, totalChunks, url, csrfToken) {
     const start = chunkNumber * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, file.size);
@@ -538,15 +647,14 @@ async function uploadChunk(file, chunkNumber, totalChunks, url, csrfToken) {
     formData.append('chunkNumber', chunkNumber);
     formData.append('totalChunks', totalChunks);
     formData.append('uploadId', uploadId);
-    formData.append('fileName', file.name);
+    formData.append('fileName', file.name.replace('.json', '.parquet'));
     formData.append('fileSize', file.size);
-    formData.append('fileType', file.type);
+    formData.append('fileType', 'application/octet-stream');
 
     if (chunkNumber === 0) {
         // First chunk includes metadata
         formData.append('metadata', JSON.stringify(getMetadata()));
     }
-
     const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -568,44 +676,37 @@ function getMetadata() {
         dataset_owner: $('#dataset_owner').val(),
         dataset_language: $('#dataset_language').val()?.join(',') || '',
         dataset_license: $('#dataset_license').val(),
-        dataset_format: $('#dataset_format').val(),
+        dataset_format: 'parquet', // Always parquet now
         dataset_desc: $('#dataset_desc').val(),
         dataset_tags: getTags(),
         dataset_columnDataType: cols ? JSON.stringify(cols) : '{}'
-        //dataset_columnDataType: window.cols ? JSON.stringify(window.cols) : '{}'
     };
 }
 
-function getTags() {
-    try {
-        const tagsValue = $('#dataset_tags').val();
-        return tagsValue ? JSON.parse(tagsValue).map(item => item.value).join(',') : '';
-    } catch (e) {
-        console.warn('Error parsing tags:', e);
-        return '';
-    }
-}
-
 async function uploadFile(file, url, csrfToken) {
-    totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    console.log(totalChunks);
-    uploadedChunks = 0;
-    uploadId = null;
-
-    updateProgress(0, 'Starting upload...');
-
     try {
-        for (let i = 0; i < totalChunks; i++) {
-            updateProgress(i / totalChunks * 100, `Uploading chunk ${i + 1} of ${totalChunks}...`);
+        // First convert the JSON file to Parquet
+        updateProgress(0, 'Converting JSON to Parquet...');
+        const parquetFile = await convertJsonToParquet(file);
 
-            const result = await uploadChunk(file, i, totalChunks, url, csrfToken);
+        // Now upload the Parquet file in chunks
+        totalChunks = Math.ceil(parquetFile.size / CHUNK_SIZE);
+        uploadedChunks = 0;
+        uploadId = null;
+
+        updateProgress(10, 'Starting upload...');
+
+        for (let i = 0; i < totalChunks; i++) {
+            const progress = 10 + (i / totalChunks * 90); // Conversion took first 10%
+            updateProgress(progress, `Uploading chunk ${i + 1} of ${totalChunks}...`);
+
+            const result = await uploadChunk(parquetFile, i, totalChunks, url, csrfToken);
 
             if (i === 0 && result.upload_id) {
                 uploadId = result.upload_id;
             }
 
             uploadedChunks++;
-            updateProgress(uploadedChunks / totalChunks * 100, `Uploaded chunk ${i + 1} of ${totalChunks}`);
         }
 
         updateProgress(100, 'Finalizing upload...');
@@ -641,9 +742,7 @@ async function finalizeUpload(url, csrfToken, uploadId) {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(
-                `Finalization failed (${response.status}): ${errorData.message || response.statusText}`
-            );
+            throw new Error(`Finalization failed (${response.status}): ${errorData.message || response.statusText}`);
         }
 
         return await response.json();
@@ -687,6 +786,69 @@ function updateProgress(percent, message, isError = false) {
     }
 }
 
+async function checkTempMetaData1() {
+    if (!$('#question_verify').is(':checked')) {
+        alert('Please verify your submission');
+        return;
+    }
+
+    const fileInput = document.getElementById('dataset_file');
+    parquet_dataset = convertJsonToParquet()
+    if (!parquet_dataset) {
+        alert('no parquet file ');
+        return;
+    }
+
+    const file = fileInput.files[0];
+    const csrfToken = getCookie('csrftoken') || window.csrfToken;
+
+    try {
+        document.getElementById('upload-container').style.display = 'block';
+        const result = await uploadFile(file, saveMetaDataUrl, csrfToken);
+        console.log('Upload successful:', result);
+        alert('File and metadata saved successfully!');
+        return result;
+    } catch (error) {
+        console.error('Upload failed:', error);
+        alert(`Upload failed: ${error.message}`);
+        throw error;
+    }
+}
+
+async function checkTempMetaData2(jsonFile) {
+    if (!$('#question_verify').is(':checked')) {
+        alert('Please verify your submission');
+        return;
+    }
+
+    // Convert the JSON file to Parquet
+    let parquet_dataset;
+    try {
+        parquet_dataset = await convertJsonToParquet(jsonFile);
+        if (!parquet_dataset) {
+            alert('Failed to create Parquet file');
+            return;
+        }
+    } catch (error) {
+        alert(`Error converting to Parquet: ${error.message}`);
+        return;
+    }
+
+    const csrfToken = getCookie('csrftoken') || window.csrfToken;
+
+    try {
+        document.getElementById('upload-container').style.display = 'block';
+        // Upload the Parquet file instead of the original JSON
+        const result = await uploadFile(parquet_dataset, saveMetaDataUrl, csrfToken);
+        console.log('Upload successful:', result);
+        alert('File and metadata saved successfully!');
+        return result;
+    } catch (error) {
+        console.error('Upload failed:', error);
+        alert(`Upload failed: ${error.message}`);
+        throw error;
+    }
+}
 
 async function checkTempMetaData(jsonInput) {
     if (!$('#question_verify').is(':checked')) {
@@ -695,16 +857,16 @@ async function checkTempMetaData(jsonInput) {
     }
 
     try {
-        const csv_dataset = await convertJsonToCsv(jsonInput);
-        if (!csv_dataset) {
-            alert('Failed to create csv file');
+        const parquet_dataset = await convertJsonToParquet(jsonInput);
+        if (!parquet_dataset) {
+            alert('Failed to create Parquet file');
             return;
         }
 
         const csrfToken = getCookie('csrftoken') || window.csrfToken;
         document.getElementById('upload-container').style.display = 'block';
 
-        const result = await uploadFile(csv_dataset, saveMetaDataUrl, csrfToken);
+        const result = await uploadFile(parquet_dataset, saveMetaDataUrl, csrfToken);
         console.log('Upload successful:', result);
         alert('File and metadata saved successfully!');
         return result;
@@ -725,14 +887,3 @@ document.getElementById('btn_upload_dataset').addEventListener('click', async fu
     }
 });
 
-function convertJsonToCsv(jsonData) {
-    if (!jsonData || jsonData.length === 0) {
-        return '';
-    }
-
-    let csvContent = Papa.unparse(jsonData);
-    const csvBlob = new Blob([csvContent], { type: 'text/csv' });
-    const newFilename = 'di_' + uploaded_file_name;
-    csv_file = new File([csvBlob], newFilename, { type: 'text/csv' });
-    return csv_file;
-}

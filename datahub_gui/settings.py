@@ -146,3 +146,10 @@ DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 # Custom error handlers
 handler403 = 'account.views.custom_permission_denied'
 handler404 = 'account.views.custom_page_not_found'
+
+CLOUD_STORAGE_CONFIG = {
+    'ACCOUNT': 'AUTH_aiahr-ae5aa48e',
+    'AUTH_TOKEN': '391af3cea0e0248b92ad2d2671d4eaa8669854be',
+    'STORAGE_BASE_URL': f'https://storage.aiahura.com/v1/AUTH_aiahr-ae5aa48e/'
+}
+

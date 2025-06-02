@@ -126,9 +126,9 @@
                             <hr class="mb-4 mt-2"/>
                             <h5>توضیحات</h5>
                             {% if dataset.language == 'fa' %}
-                                <span class="mb-0 pt-1 text-wrap" style="text-align: right; direction: rtl">{{ dataset.desc }}</span>
+                                <pre class="mb-0 pt-1" style="text-align: right; direction: rtl">{{ dataset.desc }}</pre>
                             {% else %}
-                                <span class="mb-0 pt-1 text-wrap" style="text-align: left; direction: ltr">{{ dataset.desc }}</span>
+                                <pre class="mb-0 pt-1" style="text-align: left; direction: ltr">{{ dataset.desc }}</pre>
                             {% endif %}
 
                             <hr class="my-3 my-md-4">

@@ -21,21 +21,9 @@ urlpatterns = [
 
     path('dataset_load_stepper_fa', views.dataset_load_stepper_fa, name="dataset_load_stepper_fa"),
 
-    # path('dataset_viewer_fa', views.dataset_viewer_fa, name="dataset_viewer_fa"),
-
     path("dataset_viewer_fa", MyPygWalkerView.as_view(), name="dataset_viewer_fa"),
 
-    path('dataset_col/<int:pk>', views.dataset_col, name="dataset_col"),
-
-    path('dataset_import', views.dataset_import, name="dataset_import"),
-
-    path('dataset_define', views.dataset_define, name="dataset_define"),
-
-    path('dataset_step', views.dataset_step, name="dataset_step"),
-
     path('dataset_ner', views.dataset_ner, name="dataset_ner"),
-
-
 
     path('dataset_annotation_request_fa/<int:pk>', views.dataset_annotation_request_fa, name="dataset_annotation_request_fa"),
 

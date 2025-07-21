@@ -32,7 +32,9 @@
                                     <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
                                 {% endfor %}
                             </div>
-                            <i class="ti ti-sm mx-4">{% post_to_linkedin dataset.get_absolute_url "linkedin" %}</i>
+                            <i class="ti ti-sm mx-4">
+                                {% post_to_linkedin dataset.get_absolute_url  %}
+                            </i>
 
                             <a onclick="dataset_like({{ dataset.id }})" href="#">
                                 {% if request.user in dataset.likes.all %}

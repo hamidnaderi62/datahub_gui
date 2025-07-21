@@ -809,7 +809,7 @@ def dataset_annotation_record_fa(request, pk=None):
 # Temp
 # Load model for comment sentiment analyzer
 ###################################################
-
+"""
 from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
 
 MODEL_PATH = "assets/models/sentiments/HooshvareLab"
@@ -830,6 +830,8 @@ def analyze_sentiment(comment):
     result = sentiment_pipeline(comment)[0]
     return result["label"], round(result["score"], 2)
 
+
+"""
 
 
 ###################################################

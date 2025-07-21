@@ -20,7 +20,7 @@ from django.template.loader import render_to_string
 User = get_user_model()
 
 
-def user_register_fa(request):
+def user_register_fa1(request):
     context = {'errors': []}
     if request.user.is_authenticated:
         return redirect('home:home_fa')
@@ -98,19 +98,6 @@ def verify_email_fa(request, uidb64, token):
         return redirect('account:verification_failed_fa')
 
 
-def user_login_fa1(request):
-    if request.user.is_authenticated:
-        return redirect('home:home_fa')
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
-            login(request, user)
-            return redirect('home:home_fa')
-    return render(request, 'account/login_fa.html', context={})
-
-
 def user_login_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
@@ -133,12 +120,12 @@ def user_login_fa(request):
     return render(request, 'account/login_fa.html', context)
 
 
-def user_logout_fa(request):
-    logout(request)
-    return redirect('home:home_fa')
 
 
-def user_register_fa1(request):
+
+
+
+def user_register_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
         return redirect('home:home_fa')
@@ -161,6 +148,23 @@ def user_register_fa1(request):
         return redirect('home:home_fa')
     return render(request, 'account/register_fa.html', context)
 
+
+def user_login_fa1(request):
+    if request.user.is_authenticated:
+        return redirect('home:home_fa')
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('home:home_fa')
+    return render(request, 'account/login_fa.html', context={})
+
+
+def user_logout_fa(request):
+    logout(request)
+    return redirect('home:home_fa')
 
 @login_required
 def profile_account_fa(request):
@@ -223,6 +227,7 @@ def profile_product_fa(request):
 
     return render(request, 'account/profile_product_fa.html', context={'my_products': my_products,'all_datasets': all_datasets})
 
+
 def profile_marketplace_fa(request):
     if request.method == 'POST':
         if 'btn_in_request_accept' in request.POST:
@@ -236,7 +241,6 @@ def profile_marketplace_fa(request):
         'user')
     return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})
-
 
 
 def custom_permission_denied(request, exception=None):

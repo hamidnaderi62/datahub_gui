@@ -84,8 +84,8 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "datahub",
-        "USER": "postgres",
-        "PASSWORD": "123456",
+        "USER": "green_hub",
+        "PASSWORD": "M@sterhub@2151",
         "HOST": "127.0.0.1",
         "PORT": "5432"
     }

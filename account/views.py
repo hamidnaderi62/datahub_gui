@@ -171,14 +171,24 @@ def profile_account_fa(request):
     context = {'errors': []}
     if request.method == 'POST':
         if 'btn_change_profile' in request.POST:
+            print('btn_change_profile')
             name = request.POST.get('name')
             phone = request.POST.get('phone')
             address = request.POST.get('address')
             site = request.POST.get('site')
             bio = request.POST.get('bio')
             # profile_tags = request.POST.get('profile_tags')
-            Profile.objects.filter(user=request.user).update(name=name, phone=phone, address=address, site=site,
-                                                             bio=bio)
+
+            Profile.objects.update_or_create(
+                user=request.user,  # Field to check for existing record
+                defaults={  # Fields to update/create
+                    'name': name,
+                    'phone': phone,
+                    'address': address,
+                    'site': site,
+                    'bio': bio,
+                }
+            )
             if request.FILES.get('image'):
                 image = request.FILES.get('image')
                 profile = request.user.profile
@@ -191,10 +201,13 @@ def profile_account_fa(request):
             new_password = request.POST.get('newPassword')
             confirm_password = request.POST.get('confirmPassword')
             if check_password(current_password, request.user.password):
-                print(current_password)
+                if new_password != confirm_password:
+                    context['errors'].append('کلمه های عبور یکسان نمی باشند')
+                    return render(request, 'account/profile_account_fa.html', context)
                 request.user.set_password(new_password)
                 request.user.save()
-                return render(request, 'account/login_fa.html', context)
+                logout(request)
+                return redirect('account:login_fa')
     return render(request, 'account/profile_account_fa.html', context)
 
 
@@ -235,9 +248,16 @@ def profile_marketplace_fa(request):
         elif 'btn_in_request_reject' in request.POST:
             Request.objects.filter(id=request.POST.get('request_id')).update(responseType='Reject', responseDate=datetime.now())
 
-    in_requests = Request.objects.filter(user_id=request.user.id, responseType='Request').select_related(
-        'dataset').select_related('user')
-    out_requests = Request.objects.all().select_related('dataset').filter(user_id=request.user.id).select_related(
+    user_datasets = Dataset.objects.filter(user_id=request.user.id)
+    in_requests = Request.objects.filter(
+        dataset__in=user_datasets,
+        responseType='Request'
+    ).select_related('dataset')
+
+    #in_requests = Request.objects.filter(user_id=request.user.id, responseType='Request').select_related('dataset').select_related('user')
+
+    # out_requests = Request.objects.all().select_related('dataset').filter(user_id=request.user.id).select_related('user')
+    out_requests = Request.objects.filter(user_id=request.user.id).select_related('dataset').select_related(
         'user')
     return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})

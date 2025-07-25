@@ -1,6 +1,7 @@
 {% extends 'base_fa.html' %}
 {% load static %}
 {% load my_filters %}
+{% load humanize %}
 
 {% block content %}
  <!-- Content -->
@@ -9,23 +10,30 @@
 
                     </h4>
                     <div class="app-academy">
+
                         <div class="card p-0 mb-4">
                             <div class="card-body d-flex flex-column flex-md-row justify-content-between p-0 pt-4">
                                 <div class="app-academy-md-50 card-body d-flex align-items-md-center flex-column text-md-center">
+                                    <h3 class="card-title mb-4 lh-sm px-md-5 lh-lg">
+                                        جستجوی در بازارچه تگ زنی
+                                    </h3>
+                                    <p class="mb-3">درخواست های برچسب زنی را با جستجوی کلمات کلیدی بیابید</p>
+                                       <form method="get" class="search-form w-50" action="{% url 'dataset:dataset_annotation_list_fa' %}">
+                                            <div class="d-flex align-items-center justify-content-between app-academy-md-80">
 
-                                    <form method="get" class="search-form" action="{% url 'dataset:dataset_annotation_list_fa' %}">
-                                        <div class="d-flex align-items-center justify-content-between app-academy-md-80">
-
-                                            <input name="q" class="form-control me-2" placeholder="جستجو کنید ..." type="search"/>
-                                            <button class="btn btn-primary btn-icon" type="submit">
-                                                <i class="ti ti-search"></i>
-                                            </button>
-                                        </div>
-                                    </form>
-
+                                                <input name="q" class="form-control me-2" placeholder="جستجو کنید ..." type="search"/>
+                                                <button class="btn btn-primary btn-icon" type="submit">
+                                                    <i class="ti ti-search"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                </div>
+                                <div class="app-academy-md-25 d-flex align-items-end justify-content-end">
+                                    <img alt="" class="scaleX-n1-rtl" height="188" src="{% static '/img/illustrations/bulb-light.png' %}"/>
                                 </div>
                             </div>
                         </div>
+
                         <div class="card mb-4">
                             <div class="card-body">
                                 <div class="row gy-4 mb-4">
@@ -50,14 +58,14 @@
                                                             <i class="ti ti-table text-warning me-2 ti-xs"></i>
                                                             <span class="fw-medium text-heading">
                                                                 از رکورد:
-                                                                {{ annotation_request.startRecord }}
+                                                                {{ annotation_request.startRecord|floatformat:"0"|intcomma }}
                                                             </span>
                                                         </a>
                                                         <a class="d-flex align-items-center" dideo-checked="true" href="javascript:void(0)">
                                                             <i class="ti ti-table-filled text-success me-2 ti-xs"></i>
                                                             <span class="fw-medium text-heading">
                                                                 تا رکورد:
-                                                                {{ annotation_request.endRecord }}
+                                                                {{ annotation_request.endRecord|floatformat:"0"|intcomma }}
                                                             </span>
                                                         </a>
                                                     </div>
@@ -82,7 +90,7 @@
                                                         {% if annotation_request.priceType == 'Free' %}
                                                             رایگان
                                                         {% elif annotation_request.priceType == 'Pricing' %}
-                                                            {{ annotation_request.estimatedPrice  }}
+                                                            {{ annotation_request.estimatedPrice|floatformat:"0"|intcomma  }}
                                                         {% endif %}
                                                     </div>
                                                     <div class="row g-3 mb-2">

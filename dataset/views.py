@@ -166,6 +166,9 @@ def saveTempMetaData(request):
                                    , language=dataset_language
                                    , license=dataset_license
                                    , format=dataset_format
+                                   , recordsNum=dataset_recordsNum
+                                   , price=dataset_price
+                                   , requestRequired=dataset_requestRequired
                                    , desc=dataset_desc
                                    , dataset_tags=dataset_tags
                                    #, tags=dataset_tags
@@ -445,6 +448,9 @@ def finalize_upload(request):
                     language=metadata.get('dataset_language'),
                     license=metadata.get('dataset_license'),
                     format=metadata.get('dataset_format'),
+                    recordsNum=metadata.get('dataset_recordsNum'),
+                    price=float(metadata.get('dataset_price')) if metadata.get('dataset_price') not in [None, ''] else 0,
+                    requestRequired=metadata.get('dataset_requestRequired'),
                     desc=metadata.get('dataset_desc'),
                     dataset_tags=metadata.get('dataset_tags'),
                     columnDataType=metadata.get('dataset_columnDataType'),
@@ -764,7 +770,7 @@ def create_annotation_request(request):
                                    , tags=dataset.dataset_tags
                                    , desc=annotationReq_desc
                                    , labelOptions=annotationReq_labelOptions
-                                   , requestDateTime=datetime.datetime.now()
+                                   , requestDateTime=datetime.now()
                                    )
 
             return render(request, 'dataset/dataset_annotation_request_fa.html', context={})
@@ -791,7 +797,7 @@ def dataset_annotation_list_fa(request):
                                           , user=request.user
                                           , suggestedPrice=annotationRes_suggestedPrice
                                           , text=annotationRes_text
-                                          , responseDate=datetime.datetime.now()
+                                          , responseDate=datetime.now()
                                           )
 
         all_annotation_requests = AnnotationRequest.objects.filter(annotationStatus='Requested').order_by('-requestDateTime').select_related('dataset')

@@ -4,8 +4,11 @@
 <!DOCTYPE html>
 <html class="light-style layout-navbar-fixed layout-wide" data-assets-path="" data-template="front-pages" data-theme="theme-default" dir="rtl" lang="fa">
 <head>
+    <meta charset="UTF-8"/>
+    <meta content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" name="viewport"/>
+    <meta content="" name="description"/>
     <title>پلتفرم تبادل داده - دیتاهاب</title>
-</head>
+ </head>
 <body>
 
   {% include "includes/header_fa.html" %}
@@ -53,7 +56,7 @@
                                              {% if request.user.profile.image %}
                                                 <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{{ user.profile.image.url }}"/>
                                             {% else %}
-                                                <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/14.png' %}"/>
+                                                <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/avatar_default.png' %}"/>
                                             {% endif %}
                                         </div>
                                         <div class="flex-grow-1 mt-3 mt-sm-5">
@@ -72,10 +75,6 @@
                                                         </li>
                                                     </ul>
                                                 </div>
-                                                <a class="btn btn-primary disabled" href="javascript:void(0)">
-                                                    <i class="ti ti-check me-1"></i>
-                                                    فعال
-                                                </a>
                                             </div>
                                         </div>
                                     </div>
@@ -108,7 +107,7 @@
                                 <li class="nav-item">
                                     <a  {% if request.resolver_match.url_name == 'profile_marketplace_fa' %} class="nav-link active" href="javascript:void(0);" {% else %} class="nav-link" href="{% url 'account:profile_marketplace_fa' %}" {% endif %} >
                                         <i class="ti-xs ti ti-database-dollar me-1"></i>
-                                        بازار داده
+                                        مدیریت درخواستها
                                     </a>
                                 </li>
                             </ul>

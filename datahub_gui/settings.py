@@ -34,7 +34,8 @@ INSTALLED_APPS = [
     'dataset.apps.DatasetConfig',
     'djangoaddicts.pygwalker',
     'django_social_share',
-    'taggit'
+    'taggit',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [
@@ -86,8 +87,8 @@ DATABASES = {
         "NAME": "datahub",
         "USER": "green_hub",
         "PASSWORD": "M@sterhub@2151",
-        "HOST": "datahub_db",
-        #"HOST": "127.0.0.1",
+        #"HOST": "datahub_db",
+        "HOST": "127.0.0.1",
         "PORT": "5432"
     }
 }

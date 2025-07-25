@@ -1,0 +1,126 @@
+{% extends 'base_fa.html' %}
+{% load static %}
+{% load my_filters %}
+{% load humanize %}
+
+{% block content %}
+ <!-- Content -->
+                <div class="container-xxl flex-grow-1 container-p-y">
+                    <h4 class="py-3 mb-4">
+
+                    </h4>
+                    <div class="app-academy">
+                        <div class="card p-0 mb-4">
+                            <div class="card-body d-flex flex-column flex-md-row justify-content-between p-0 pt-4">
+                                <div class="app-academy-md-50 card-body d-flex align-items-md-center flex-column text-md-center">
+
+                                    <form method="get" class="search-form" action="{% url 'dataset:dataset_list_fa' %}">
+                                        <div class="d-flex align-items-center justify-content-between app-academy-md-80">
+
+                                            <input name="q" class="form-control me-2" placeholder="عبارت جستجو را وارد نمایید" type="search"/>
+                                            <button class="btn btn-primary btn-icon" type="submit">
+                                                <i class="ti ti-search"></i>
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row gy-4 mb-4">
+                                    {% for dataset in datasets %}
+                                        <div class="col-sm-6 col-lg-4">
+                                        <div class="card p-2 h-100 shadow-none border">
+
+                                            <div class="card-body p-3 pt-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                                    <div class="me-md-1">
+                                                       {% if dataset.referenceOwner %}
+                                                            <img src="{% static 'logo/' %}{{ dataset.referenceOwner }}.png" style="width: 50px;" alt="logo" />
+                                                       {% else %}
+                                                            <img src="{% static 'logo/datahub.png' %}" style="width: 50px;" alt="logo" />
+                                                       {% endif %}
+
+                                                    </div>
+                                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0"  >
+                                                        <span class="text-muted" style="direction: ltr">({{ dataset.size | filesizeformat}}  )</span>
+
+                                                        {% for lang in dataset.language|split_by:','  %}
+                                                            <span class="badge badge-number badge-center bg-primary">{{ lang }}</span>
+                                                        {% endfor %}
+
+                                                    </h6>
+                                                </div>
+                                                <a class="h5" href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">
+                                                    {{ dataset.name }}
+                                                </a>
+                                                <p class="mt-2">
+                                                    {{ dataset.owner }}
+                                                </p>
+                                                <p class="text-nowrap">
+                                                    <i class="ti ti-calendar ti-sm me-2 mt-n2"></i>
+                                                    تاریخ ایجاد:
+                                                    {% if dataset.created %} {{ dataset.created|to_jalali_s }} {% else %} - {% endif %}
+                                                </p>
+                                                <p class="text-nowrap">
+                                                    <i class="ti ti-table-filled ti-sm me-2 mt-n2"></i>
+                                                    تعداد رکورد:
+                                                    {% if dataset.recordsNum %} {{ dataset.recordsNum }} {% else %} - {% endif %}
+                                                </p>
+                                                <p class="text-nowrap">
+                                                    <i class="ti ti-currency-dollar ti-sm me-2 mt-n2 "></i>
+                                                    قیمت دیتاست :
+                                                    <span class="badge bg-label-success me-md-1 mb-2" >
+                                                        {% if dataset.price != 0 %} {{ dataset.price|floatformat:"0"|intcomma }} تومان{% else %} رایگان {% endif %}
+                                                    </span>
+                                                </p>
+                                                {% for tag in dataset.dataset_tags|split_by:','  %}
+                                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
+                                                {% endfor %}
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <nav aria-label="پیمایش صفحه" class="d-flex align-items-center justify-content-center">
+                                    {% if datasets.has_other_pages %}
+                                    <ul class="pagination">
+                                         {% if datasets.has_previous %}
+                                            <li class="page-item prev">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-right ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                        {% for i in datasets.paginator.page_range %}
+                                            {%  if datasets.number == i %}
+                                                <li class="page-item active">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% else %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}">{{ i }}</a>
+                                                </li>
+                                            {% endif %}
+                                        {% endfor %}
+                                        {% if datasets.has_next %}
+                                            <li class="page-item next">
+                                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}" >
+                                                    <i class="ti ti-chevrons-left ti-xs"></i>
+                                                </a>
+                                            </li>
+                                        {% endif %}
+                                    </ul>
+                                    {% endif %}
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--/ Content -->
+
+
+{% endblock %}

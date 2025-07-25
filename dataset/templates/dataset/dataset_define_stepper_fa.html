@@ -131,7 +131,7 @@
                                                 </div>
                                                 <div class="col-sm-6">
                                                     <label class="form-label" for="dataset_owner">مالک دیتاست</label>
-                                                    <input class="form-control" id="dataset_owner" name="dataset_owner" placeholder="" type="text"/>
+                                                    <input class="form-control" id="dataset_owner" name="dataset_owner" placeholder="" value="{% if user.profile.name %} {{ user.profile.name }} {% endif %}" type="text"/>
                                                 </div>
 
                                                 <div class="col-sm-4">
@@ -150,7 +150,7 @@
                                                     </select>
                                                 </div>
                                                 <div class="col-sm-4">
-                                                    <label class="form-label" for="dataset_format">فرمت داده</label>
+                                                    <label class="form-label" for="dataset_format">فرمت داده ها</label>
                                                     <select class="selectpicker w-auto" data-icon-base="ti" data-style="btn-transparent" data-tick-icon="ti-check text-white" id="dataset_format" name="dataset_format">
                                                         <option selected value="Text">متن</option>
                                                         <option value="Image">تصویر</option>
@@ -158,6 +158,21 @@
                                                     </select>
                                                 </div>
 
+                                                <div class="col-sm-4">
+                                                    <label class="form-label" for="dataset_recordsNum">تعداد نمونه های دیتاست</label>
+                                                    <input class="form-control" id="dataset_recordsNum" name="dataset_recordsNum" placeholder="" value="0" type="number"/>
+                                                </div>
+                                                <div class="col-sm-4">
+                                                    <label class="form-label" for="dataset_price">قیمت دیتاست (تومان)</label>
+                                                    <input class="form-control" id="dataset_price" name="dataset_price" placeholder="" value="0" type="number"/>
+                                                </div>
+                                                <div class="col-sm-4">
+                                                    <label class="form-label" for="dataset_requestRequired">خریدار قبل از خرید یا دانلود از من تاییدیه دریافت نماید</label>
+                                                    <select class="selectpicker w-auto" data-icon-base="ti" data-style="btn-transparent" data-tick-icon="ti-check text-white" id="dataset_requestRequired" name="dataset_requestRequired">
+                                                        <option selected value="No">خیر</option>
+                                                        <option value="Yes">بلی</option>
+                                                    </select>
+                                                </div>
 
                                                 <div class="col-sm-12">
                                                     <label class="form-label" for="dataset_file">انتخاب فایل </label>
@@ -171,8 +186,8 @@
                                                 </div>
 
                                                 <div class="col-sm-12">
-                                                    <label class="form-label d-block" for="dataset_tags">تگ ها</label>
-                                                    <input class="tagify-email-list" id="dataset_tags"  name="dataset_tags" value="aaa,bbb"/>
+                                                    <label class="form-label d-block" for="dataset_tags">تگ ها (دیتاست شما بر اساس این کلمات کلیدی معرفی یا جستجو می گردند)</label>
+                                                    <input class="tagify-email-list" id="dataset_tags"  name="dataset_tags" />
                                                     <button class="btn btn-sm rounded-pill btn-icon btn-outline-primary mb-1" type="button">
                                                         <span class="tf-icons ti ti-plus"></span>
                                                     </button>
@@ -229,8 +244,8 @@
                                                                         </div>
                                                                         <div class="row pb-4">
                                                                             <div class="col-12">
-                                                                                <button class="btn btn-primary" data-repeater-create type="button">افزودن </button>
-                                                                                <button class="btn btn-danger" type="button" onclick="generateColMetaData()">ذخیره</button>
+                                                                                <button class="btn btn-primary" data-repeater-create type="button">افزودن ستون جدید </button>
+                                                                                <button class="btn btn-danger" type="button" onclick="generateColMetaData()"> ذخیره تغییرات</button>
                                                                             </div>
                                                                         </div>
                                                                     </form>

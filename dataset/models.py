@@ -104,7 +104,7 @@ class Dataset(models.Model):
     image = models.ImageField(upload_to='images', blank=True, null=True)
     requestRequired = models.CharField(max_length=50, choices=REQUEST_REQUIRED, default='No', blank=True, null=True)
     downloadLink = models.JSONField(blank=True, null=True)
-    price = models.FloatField(blank=True, null=True)
+    price = models.FloatField(default=0, blank=True)
     downloadCount = models.IntegerField(blank=True, null=True)
     referenceOwner = models.CharField(max_length=500, blank=True, null=True)
     createType = models.CharField(max_length=50, choices=CREATE_TYPE, default='Create', blank=True, null=True)

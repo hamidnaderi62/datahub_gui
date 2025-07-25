@@ -201,6 +201,9 @@ function getMetadata() {
         dataset_language: $('#dataset_language').val()?.join(',') || '',
         dataset_license: $('#dataset_license').val(),
         dataset_format: $('#dataset_format').val(),
+        dataset_recordsNum: $('#dataset_recordsNum').val(),
+        dataset_price: $('#dataset_price').val(),
+        dataset_requestRequired: $('#dataset_requestRequired').val(),
         dataset_desc: $('#dataset_desc').val(),
         dataset_tags: getTags(),
         dataset_columnDataType: cols ? JSON.stringify(cols) : '{}'

@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: green_hub
+      POSTGRES_PASSWORD: M@sterhub@2151
+      POSTGRES_DB: datahub
+    volumes:
+      - datahub-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - datahub-network
+
+  api:
+    build: https://github.com/hamidnaderi62/datahub_api.git#main
+    environment:
+      DJANGO_SETTINGS_MODULE: datahub_api.settings
+    ports:
+      - "8001:8001"
+    depends_on:
+      - db
+    networks:
+      - datahub-network
+
+  gui:
+    build: https://github.com/hamidnaderi62/datahub_gui.git#main
+    environment:
+      DJANGO_SETTINGS_MODULE: datahub_gui.settings
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - api
+    networks:
+      - datahub-network
+
+networks:
+  datahub-network:
+    driver: bridge
+
+volumes:
+  datahub-data:

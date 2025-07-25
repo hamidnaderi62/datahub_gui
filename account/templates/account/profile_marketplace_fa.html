@@ -37,7 +37,7 @@
                             <div class="nav-align-top nav-tabs-shadow mb-4">
                                 <ul class="nav nav-tabs" role="tablist">
                                     <li class="nav-item">
-                                        <button aria-controls="navs-top-home" aria-selected="false" class="nav-link  active" data-bs-target="#navs-top-in_requests" data-bs-toggle="tab" role="tab" type="button"> درخواست ها وارده</button>
+                                        <button aria-controls="navs-top-home" aria-selected="false" class="nav-link  active" data-bs-target="#navs-top-in_requests" data-bs-toggle="tab" role="tab" type="button"> درخواست های وارده</button>
                                     </li>
                                     <li class="nav-item">
                                         <button aria-controls="navs-top-profile" aria-selected="false" class="nav-link" data-bs-target="#navs-top-out_requests" data-bs-toggle="tab" role="tab" type="button"> درخواست های صادره</button>
@@ -48,6 +48,15 @@
                                          <!-- in_requests List Style -->
                                             <div class="col-12 col-lg-12 mb-4 mb-xl-0">
                                                 <div class="demo-inline-spacing mt-3">
+
+                                                    <div class="col-md-12 col-xl-12">
+                                                        <div class="card bg-secondary text-white mb-3">
+                                                            <div class="card-body">
+                                                                <p class="card-text">درخواستهای وارده : شامل درخواستهایی است می باشد که توسط کاربران دیگر برای خرید/دانلود دیتاستهای شما ثبت شده است</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     <div class="list-group">
                                                         {% for in_request in in_requests %}
                                                             <div class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer">
@@ -90,6 +99,15 @@
                                       <!-- out_requests List Style -->
                                             <div class="col-12 col-lg-12 mb-4 mb-xl-0">
                                                 <div class="demo-inline-spacing mt-3">
+
+                                                    <div class="col-md-12 col-xl-12">
+                                                        <div class="card bg-secondary text-white mb-3">
+                                                            <div class="card-body">
+                                                                <p class="card-text">درخواستهای صادره : شامل درخواستهایی است می باشد که توسط شما برای خرید/دانلود دیتاستهای کاربران دیگر ثبت شده است</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
                                                     <div class="list-group">
                                                         {% for out_request in out_requests %}
                                                             <div class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer">
@@ -112,7 +130,14 @@
                                                                         </small>
                                                                     </div>
                                                                     <div class="add-btn">
-                                                                        <span class="badge bg-label-primary">{{ out_request.responseType }}</span>
+                                                                        {% if out_request.responseType == 'Request' %}
+                                                                            <span class="badge bg-label-primary">درخواست شده</span>
+                                                                        {% elif out_request.responseType == 'Accept' %}
+                                                                           <span class="badge bg-label-primary"> پذیرش</span>
+                                                                            <a target="_blank" href="#" class="btn btn-primary btn-sm" > مشاهده دیتاست</a>
+                                                                        {% elif out_request.responseType == 'Reject' %}
+                                                                            <span class="badge bg-label-primary">عدم پذیرش</span>
+                                                                        {% endif %}
 
                                                                     </div>
                                                                 </div>

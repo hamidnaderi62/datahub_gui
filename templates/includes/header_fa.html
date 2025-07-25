@@ -85,20 +85,20 @@
                                     {% if request.user.profile.image %}
                                         <img alt class="h-auto rounded-circle" src="{{ user.profile.image.url }}" />
                                     {% else %}
-                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
+                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/avatar_default.png' %}"/>
                                     {% endif %}
                                 </div>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li>
-                                    <a class="dropdown-item" href="pages-account-settings-account.html">
+                                    <a class="dropdown-item"  href="{% url 'account:profile_account_fa' %}">
                                         <div class="d-flex">
                                             <div class="flex-shrink-0 me-3">
                                                 <div class="avatar avatar-online">
                                                     {% if request.user.profile.image %}
                                                         <img alt class="h-auto rounded-circle" src="{{ user.profile.image.url }}" />
                                                     {% else %}
-                                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
+                                                        <img alt class="h-auto rounded-circle" src="{% static 'img/avatars/avatar_default.png' %}"/>
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -122,21 +122,27 @@
                                 <div class="dropdown-divider"></div>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{% url 'dataset:dataset_new_stepper_fa' %}">
-                                    <i class="ti ti-database-plus me-2 ti-sm"></i>
-                                    <span class="align-middle">تعریف دیتاست </span>
+                                <a class="dropdown-item" href="{% url 'account:profile_account_fa' %}">
+                                    <i class="ti ti-users me-2 ti-sm"></i>
+                                    <span class="align-middle">حساب کاربری </span>
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{% url 'dataset:dataset_list_fa' %}">
-                                    <i class="ti ti-database-search me-2 ti-sm"></i>
-                                    <span class="align-middle">جستجوی دیتاست</span>
+                                <a class="dropdown-item" href="{% url 'account:profile_dataset_fa' %}">
+                                    <i class="ti ti-database me-2 ti-sm"></i>
+                                    <span class="align-middle">دیتاست های من</span>
                                 </a>
                             </li>
                             <li>
-                                <a class="dropdown-item" href="{% url 'dataset:dataset_annotation_list_fa' %}">
-                                    <i class="ti ti-database-x me-2 ti-sm"></i>
-                                    <span class="align-middle"> برچسب زنی</span>
+                                <a class="dropdown-item" href="{% url 'account:profile_product_fa' %}">
+                                    <i class="ti ti-paper-bag me-2 ti-sm"></i>
+                                    <span class="align-middle">محصولات من</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'account:profile_marketplace_fa' %}">
+                                    <i class="ti ti-database-dollar me-2 ti-sm"></i>
+                                    <span class="align-middle"> مدیریت درخواستها</span>
                                 </a>
                             </li>
                             <li>
@@ -160,41 +166,6 @@
                         </a>
                     </li>
                 {% endif %}
-            
-                <!-- Language -->
-                <li class="nav-item dropdown-language dropdown me-2 me-xl-0">
-                    <a class="nav-link dropdown-toggle hide-arrow" data-bs-toggle="dropdown" href="javascript:void(0);">
-                        <i class="ti ti-language rounded-circle ti-md"></i>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li>
-                            <a class="dropdown-item" data-language="fa" data-text-direction="rtl" href="javascript:void(0);">
-                                <span class="align-middle">فارسی</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" data-language="en" data-text-direction="ltr" href="javascript:void(0);">
-                                <span class="align-middle">انگلیسی</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" data-language="fr" data-text-direction="ltr" href="javascript:void(0);">
-                                <span class="align-middle">فرانسوی</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" data-language="ar" data-text-direction="rtl" href="javascript:void(0);">
-                                <span class="align-middle">عربي</span>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" data-language="de" data-text-direction="ltr" href="javascript:void(0);">
-                                <span class="align-middle">آلمانی</span>
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-                <!--/ Language -->
             
                 <!-- navbar button: End -->
             </ul>

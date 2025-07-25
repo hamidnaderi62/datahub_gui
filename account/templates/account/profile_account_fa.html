@@ -15,9 +15,9 @@
             <div class="card-body">
                 <div class="d-flex align-items-start align-items-sm-center gap-4">
                     {% if request.user.profile.image %}
-                        <img alt="کاربر-آواتار" class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" src="{{ user.profile.image.url }}"/>
+                        <img alt="تصویر کاربر" class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" src="{{ user.profile.image.url }}"/>
                     {% else %}
-                        <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/14.png' %}"/>
+                        <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/avatar_default.png' %}"/>
                     {% endif %}
 
                     <div class="button-wrapper">
@@ -83,7 +83,7 @@
                         <div class="mb-3 col-md-6 form-password-toggle">
                             <label class="form-label" for="currentPassword">رمز عبور فعلی</label>
                             <div class="input-group input-group-merge">
-                                <input class="form-control" id="currentPassword" name="currentPassword" placeholder="············" type="password"/>
+                                <input class="form-control" required id="currentPassword" name="currentPassword" placeholder="············" type="password"/>
                                 <span class="input-group-text cursor-pointer">
                                     <i class="ti ti-eye-off"></i>
                                 </span>
@@ -94,7 +94,7 @@
                         <div class="mb-3 col-md-6 form-password-toggle">
                             <label class="form-label" for="newPassword">رمز عبور جدید</label>
                             <div class="input-group input-group-merge">
-                                <input class="form-control" id="newPassword" name="newPassword" placeholder="············" type="password"/>
+                                <input class="form-control" minlength="8" required id="newPassword" name="newPassword" placeholder="············" type="password"/>
                                 <span class="input-group-text cursor-pointer">
                                     <i class="ti ti-eye-off"></i>
                                 </span>
@@ -103,20 +103,23 @@
                         <div class="mb-3 col-md-6 form-password-toggle">
                             <label class="form-label" for="confirmPassword">تأیید رمز عبور جدید</label>
                             <div class="input-group input-group-merge">
-                                <input class="form-control" id="confirmPassword" name="confirmPassword" placeholder="············" type="password"/>
+                                <input class="form-control" minlength="8" required id="confirmPassword" name="confirmPassword" placeholder="············" type="password"/>
                                 <span class="input-group-text cursor-pointer">
                                     <i class="ti ti-eye-off"></i>
                                 </span>
                             </div>
                         </div>
-                        <div class="col-12 mb-4">
-                            <h6>الزامات رمز عبور:</h6>
-                            <ul class="ps-3 mb-0">
-                                <li class="mb-1">حداقل 8 کارکتر</li>
-                                <li class="mb-1">حداقل یک حرف کوچک</li>
-                                <li>حداقل یک عدد یا نماد خاص</li>
-                            </ul>
-                        </div>
+
+                        {% if errors %}
+                            <div class="card-body">
+                            {%  for error in errors %}
+                                <div class="alert alert-danger alert-dismissible" role="alert">{{ error }}
+                                    <button aria-label="بستن" class="btn-close" data-bs-dismiss="alert" type="button"></button>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+
                         <div>
                             <button class="btn btn-primary me-2" name="btn_change_password"  type="submit">بروزرسانی رمز</button>
                             <button class="btn btn-label-secondary" type="reset">لغو</button>

@@ -81,6 +81,22 @@ WSGI_APPLICATION = 'datahub_gui.wsgi.application'
 #    }
 #}
 
+
+# local
+'''
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": "datahub",
+        "USER": "postgres",
+        "PASSWORD": "123456",
+        "HOST": "127.0.0.1",
+        "PORT": "5432"
+    }
+}
+'''
+
+# server
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
@@ -88,11 +104,9 @@ DATABASES = {
         "USER": "green_hub",
         "PASSWORD": "M@sterhub@2151",
         "HOST": "datahub_db",
-        #"HOST": "127.0.0.1",
         "PORT": "5432"
     }
 }
-
 
 
 # Password validation
@@ -149,9 +163,10 @@ DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 handler403 = 'account.views.custom_permission_denied'
 handler404 = 'account.views.custom_page_not_found'
 
-CLOUD_STORAGE_CONFIG = {
-    'ACCOUNT': 'AUTH_aiahr-ae5aa48e',
-    'AUTH_TOKEN': '391af3cea0e0248b92ad2d2671d4eaa8669854be',
-    'STORAGE_BASE_URL': f'https://storage.aiahura.com/v1/AUTH_aiahr-ae5aa48e/'
-}
 
+CLOUD_STORAGE_CONFIG = {
+    'S3_ENDPOINT': 'https://teh-1.s3.poshtiban.com',  # or your S3 endpoint
+    'ACCESS_KEY': '008CA13MP30OHQR2IX5E',
+    'SECRET_KEY': 'nBLO5dRnuBPVGZLcbuhsWkgsQRHrHKRVe9TLS89X',
+    'REGION': 'us-east-1',  # or your region
+}

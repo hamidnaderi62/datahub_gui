@@ -4,410 +4,472 @@
 {% load my_filters %}
 {% load humanize %}
 
-<!-- Chat Vendors CSS -->
-<link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
-<link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
-<link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
-<link href="{% static 'vendor/libs/bootstrap-maxlength/bootstrap-maxlength.css' %}" rel="stylesheet"/>
-<!-- Page CSS -->
-<link href="{% static 'vendor/css/pages/app-chat.css' %}" rel="stylesheet"/>
-
 {% block content %}
-<!-- Sections:Start -->
-    <div class="container-xxl flex-grow-1 container-p-y">
-        <div class="card g-3 mt-5">
-            <div class="card-body row g-3">
-                <div class="col-lg-8">
-                    <div class="d-flex justify-content-between align-items-center flex-wrap mb-2 gap-1">
-                        <div class="me-1">
-                            <h5 class="mb-1">{{ dataset.name }}</h5>
-                            <p class="mb-1">مالک:
-                                <span class="fw-medium"> {{ dataset.owner}}</span>
-                            </p>
-                        </div>
-
-
-                        <div class="d-flex align-items-center">
-                            <div>
-                                {% for tag in dataset.dataset_tags|split_by:','  %}
-                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
-                                {% endfor %}
-                            </div>
-                            <i class="ti ti-sm mx-4">
-                                {% post_to_linkedin dataset.get_absolute_url  %}
-                            </i>
-
-                            <a onclick="dataset_like({{ dataset.id }})" href="#">
-                                {% if request.user in dataset.likes.all %}
-                                    <i id ="like_heart" class="ti ti-heart-filled ti-sm"></i>
-                                {% else %}
-                                    <i id ="like_heart" class="ti ti-heart ti-sm"></i>
-                                {% endif %}
-                            </a>
-                            <span id="total_likes"> {{ dataset.total_likes }} </span>
-
-
-                        </div>
-                    </div>
-                    <div class="card academy-content shadow-none border">
-                        <div class="p-2">
-                            <div class="cursor-pointer">
-
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <h5>جزئیات</h5>
-                            <div class="d-flex flex-wrap">
-                                <div class="me-5">
-                                    <p class="text-nowrap"  >
-                                        <i class="ti ti-database-plus ti-sm me-2 mt-n2"></i>
-                                        مرجع:
-                                        <span style="direction: ltr">
-                                           {% if dataset.referenceOwner %}
-                                                <img src="{% static 'logo/' %}{{ dataset.referenceOwner }}.png" style="width: 50px;" alt="logo" />
-                                           {% else %}
-                                                <img src="{% static 'logo/datahub.png' %}" style="width: 50px;" alt="logo" />
-                                           {% endif %}
-                                        </span>
-                                    </p>
-                                    <p class="text-nowrap"  >
-                                        <i class="ti ti-file ti-sm me-2 mt-n2"></i>
-                                        حجم:
-                                        <span style="direction: ltr">
-                                            {% if dataset.size %}  {{ dataset.size | filesizeformat }}  {% else %} - {% endif %}
-                                        </span>
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-box-multiple ti-sm me-2 mt-n2"></i>
-                                        تعداد فایل:
-                                        {% if dataset.filesCount %} {{ dataset.filesCount }} {% else %} - {% endif %}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-calendar ti-sm me-2 mt-n2"></i>
-                                        تاریخ ایجاد:
-                                        {% if dataset.created %} {{ dataset.created|to_jalali_s }} {% else %} - {% endif %}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-currency-dollar ti-sm me-2 mt-n2 "></i>
-                                        قیمت دیتاست :
-                                        <span class="badge bg-label-success me-md-1 mb-2" >
-                                            {% if dataset.price != 0 %} {{ dataset.price|floatformat:"0"|intcomma }} {% else %} رایگان {% endif %} تومان
-                                        </span>
-                                    </p>
-                                </div>
-                                <div>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-table-filled ti-sm me-2 mt-n2"></i>
-                                        تعداد رکورد:
-                                        {% if dataset.recordsNum %} {{ dataset.recordsNum }} {% else %} - {% endif %}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-license ti-sm me-2 mt-n2"></i>
-                                        لایسنس:
-                                        {% if dataset.license %} {{ dataset.license }} {% else %} - {% endif %}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-clear-formatting ti-sm me-2 mt-n2"></i>
-                                        فرمت:
-                                        {% if dataset.format %} {{ dataset.format }} {% else %} - {% endif %}
-                                    </p>
-                                    <p class="text-nowrap">
-                                        <i class="ti ti-language ti-sm me-2 mt-n2"></i>
-                                        زبان:
-                                        {% if dataset.language %} {{ dataset.language }} {% else %} - {% endif %}
-                                    </p>
-                                </div>
-                            </div>
-                            {% if dataset.refLink %}
-                                <p class="text-nowrap">
-                                    <i class="ti ti-link ti-sm me-2 mt-n2"></i>
-                                    لینک مرجع :
-                                <a target="_blank" href="{{ dataset.refLink }}" > {{ dataset.refLink }} </a>
-                                </p>
-                            {% endif %}
-
-                            {% if dataset.dataType == 'Text' %}
-                                <a class="h5" target="_blank" href="{% url 'dataset:dataset_viewer_fa' %}?dataset_id={{ dataset.id }}">
-                                   <button  class="btn btn-secondary btn-sm" > نمایش اطلاعات توصیفی</button>
-                                </a>
-                            {% endif %}
-
-                            <hr class="mb-4 mt-2"/>
-                            <h5>توضیحات</h5>
-                            {% if dataset.language == 'fa' %}
-                                <pre class="mb-0 pt-1" style="text-align: right; direction: rtl">{{ dataset.desc }}</pre>
+<div class="container-xxl flex-grow-1 container-p-y">
+    <!-- Header Section -->
+    <div class="card mb-4 pt-4 mt-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            {% if dataset.referenceOwner %}
+                                <img src="{% static 'logo/' %}{{ dataset.referenceOwner }}.png" class="rounded" style="width: 60px; height: 60px;" alt="logo" />
                             {% else %}
-                                <pre class="mb-0 pt-1" style="text-align: left; direction: ltr">{{ dataset.desc }}</pre>
-                            {% endif %}
-
-                            <hr class="my-3 my-md-4">
-                            <h5 class="text-start">ساختار دیتاست</h5>
-                            <div class="d-flex justify-content-start align-items-center user-name">
-                                <code id="json_viewer" class="w-100 overflow-auto p-2 bg-light rounded" style="direction: ltr; text-align: left; white-space: pre-wrap; word-break: break-word; font-size: 0.875rem;">
-                                    {% if dataset.columnDataType %}{{ dataset.columnDataType }}{% endif %}
-                                </code>
-                            </div>
-
-                             <hr class="my-4"/>
-                                <h5>نظرات</h5>
-                                <!-- Chat History -->
-                                <div class="col app-chat-history ">
-                                    <div class="chat-history-wrapper">
-                                        <div class="chat-history-body ">
-                                            <ul class="list-unstyled chat-history">
-                                                {% for comment in dataset.comments.all %}
-                                                        <li class="chat-message">
-                                                            <div class="d-flex overflow-hidden align-items-center">
-                                                                <i class="ti ti-menu-2 ti-sm cursor-pointer d-lg-none d-block me-2" data-bs-toggle="sidebar" data-overlay data-target="#app-chat-contacts"></i>
-                                                                <div class="flex-shrink-0 avatar">
-                                                                     {% if comment.user.profile.image %}
-                                                                        <img src="{{ comment.user.profile.image.url }}" alt="demo" class="rounded-circle">
-                                                                    {% else %}
-                                                                        <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
-                                                                    {% endif %}
-                                                                </div>
-                                                                <div class="chat-contact-info flex-grow-1 ms-2">
-                                                                    <h6 class="m-0">{{ comment.user.username }}</h6>
-                                                                </div>
-                                                            </div>
-
-                                                            <div class="chat-message-wrapper flex-grow-1">
-                                                                <div class="chat-message-text">
-                                                                    <p class="mb-0">{{ comment.text }}</p>
-                                                                </div>
-                                                                <div class="text-muted mt-1">
-                                                                    <small>{{ comment.Date|to_jalali_s}}</small>
-                                                                </div>
-                                                            </div>
-                                                        </li>
-                                                        <br/>
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                        <!-- Chat message form -->
-                                        {% if request.user.is_authenticated %}
-                                            <div class="chat-history-footer shadow-sm bg-body">
-                                                <form class="form-send-message d-flex justify-content-between align-items-center" method="post" >
-                                                    {% csrf_token %}
-                                                    <input type="text" name="text" id="text" class="form-control message-input border-0 me-3 shadow-none" placeholder="نظر خود را اینجا تایپ کنید"/>
-                                                    <div class="message-actions d-flex align-items-center">
-                                                        <button type="submit" name="submit_dataset_comment" class="btn btn-primary d-flex send-msg-btn">
-                                                            <span class="align-middle d-md-inline-block d-none">ارسال</span>
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <!-- /Chat History -->
-
-                        </div>
-                    </div>
-
-                </div>
-
-
-                <div class="col-lg-4">
-                    <div class="row mt-3">
-                        <div class="d-grid gap-2 col-lg-12 mx-auto">
-                            {% if request.user.is_authenticated %}
-
-                                {% if dataset.requestRequired == 'Yes' %}
-                                    <form  method="post" >
-                                        {% csrf_token %}
-                                        <button name="submit_dataset_request" class="btn btn-primary btn-lg" type="submit"> ثبت درخواست دریافت/خرید دیتاست</button>
-                                    </form>
-                                {% else %}
-                                    <a class="h5" href="{% url "dataset:dataset_download_fa" pk=dataset.id %}">
-                                        <button name="submit_dataset_download" class="btn btn-primary btn-lg" >دریافت/خرید دیتاست</button>
-                                    </a>
-
-                                {% endif %}
-
+                                <img src="{% static 'logo/datahub.png' %}" class="rounded" style="width: 60px; height: 60px;" alt="logo" />
                             {% endif %}
                         </div>
-                    </div>
-                    <br/>
-                    <div class="accordion stick-top accordion-bordered" id="courseContent">
-                        <div class="accordion-item active mb-0">
-                            <div class="accordion-header" id="product_paper">
-                                <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter1" data-bs-toggle="collapse" type="button">
-                                    <span class="d-flex flex-column">
-                                        <span class="h5 mb-1">مقالات</span>
-                                    </span>
-                                </button>
-                            </div>
-                            {% for product in dataset.products.all %}
-                                {% if product.type == 'Paper' %}
-                                    <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter1">
-                                        <div class="accordion-body py-3 border-top">
-                                            <div class="form-check d-flex align-items-center mb-3">
-                                              <div class="flex-shrink-0 avatar">
-                                                {% if product.image %}
-                                                    <img src="{{ product.image.url }}" alt="demo" >
-                                                {% else %}
-                                                    <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
-                                                {% endif %}
-                                              </div>
-                                              <label class="form-check-label ms-3" for="defaultCheck1">
-                                                  <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
-                                                  <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
-                                              </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <div class="accordion-item  mb-0">
-                            <div class="accordion-header" id="product_model">
-                                <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter2" data-bs-toggle="collapse" type="button">
-                                    <span class="d-flex flex-column">
-                                        <span class="h5 mb-1">مدل ها</span>
-                                    </span>
-                                </button>
-                            </div>
-                            {% for product in dataset.products.all %}
-                                {% if product.type == 'Model' %}
-                                    <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter2">
-                                        <div class="accordion-body py-3 border-top">
-                                            <div class="form-check d-flex align-items-center mb-3">
-                                              <div class="flex-shrink-0 avatar">
-                                                 {% if product.image %}
-                                                    <img src="{{ product.image.url }}" alt="demo" >
-                                                {% else %}
-                                                    <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
-                                                {% endif %}
-                                              </div>
-                                              <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>
-                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
-                                              </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <div class="accordion-item  mb-0">
-                            <div class="accordion-header" id="product_service">
-                                <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter3" data-bs-toggle="collapse" type="button">
-                                    <span class="d-flex flex-column">
-                                        <span class="h5 mb-1">سرویس ها</span>
-                                    </span>
-                                </button>
-                            </div>
-                            {% for product in dataset.products.all %}
-                                {% if product.type == 'Service' %}
-                                    <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter3">
-                                        <div class="accordion-body py-3 border-top">
-                                            <div class="form-check d-flex align-items-center mb-3">
-                                              <div class="flex-shrink-0 avatar">
-                                                 {% if product.image %}
-                                                    <img src="{{ product.image.url }}" alt="demo" >
-                                                {% else %}
-                                                    <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
-                                                {% endif %}
-                                              </div>
-                                              <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
-                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
-                                              </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                        <div class="accordion-item  mb-0">
-                            <div class="accordion-header" id="product_source">
-                                <button aria-controls="chapterOne" aria-expanded="true" class="accordion-button bg-lighter rounded-0" data-bs-target="#chapter4" data-bs-toggle="collapse" type="button">
-                                    <span class="d-flex flex-column">
-                                        <span class="h5 mb-1">سورس کد</span>
-                                    </span>
-                                </button>
-                            </div>
-                            {% for product in dataset.products.all %}
-                                {% if product.type == 'Service' %}
-                                    <div class="accordion-collapse collapse show" data-bs-parent="#courseContent" id="chapter4">
-                                        <div class="accordion-body py-3 border-top">
-                                            <div class="form-check d-flex align-items-center mb-3">
-                                              <div class="flex-shrink-0 avatar">
-                                                 {% if product.image %}
-                                                    <img src="{{ product.image.url }}" alt="demo" >
-                                                {% else %}
-                                                    <img src="{% static 'assets/img/avatars/2.png' %}" alt="avatar" class="rounded-circle">
-                                                {% endif %}
-                                              </div>
-                                              <label class="form-check-label ms-3" for="defaultCheck1">
-                                                    <a target="_blank" href="{{ product.link }}"><span class="mb-0 h6">{{ product.title }}</span></a>>
-                                                    <span class="text-muted d-block">{{ product.productDate|to_jalali_s }}</span>
-                                              </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endif %}
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
-        <div class="card mb-4 mt-4 ">
-             <div class="me-1">
-                <h5 class="mb-1 mt-2"> دیتاستهای مشابه </h5>
-            </div>
-            <div class="card-body">
-                <div class="row gy-4 mb-4">
-                    {% for dataset in similar_datasets %}
-                        <div class="col-sm-6 col-lg-4">
-                        <div class="card p-2 h-100 shadow-none border">
-
-                            <div class="card-body p-3 pt-2">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div class="me-md-1">
-                                        {% for lang in dataset.language|split_by:','  %}
-                                            <span class="badge badge-number badge-center bg-primary">{{ lang }}</span>
-                                        {% endfor %}
-                                    </div>
-                                    <h6 class="d-flex align-items-center justify-content-center gap-1 mb-0">
-                                        <span class="text-muted" style="direction: ltr">({{ dataset.size |filesizeformat }} )</span>
-
-                                        4.4
-                                        <span class="text-warning">
-                                            <i class="ti ti-star-filled me-1 mt-n1"></i>
-                                        </span>
-
-                                    </h6>
-                                </div>
-                                <a class="h5"  href="{% url "dataset:dataset_detail_fa" pk=dataset.id %}">
-                                    {{ dataset.name }}
-                                </a>
-                                <p class="mt-2">
+                        <div class="flex-grow-1 ms-3">
+                            <h5 class="mb-1 text-primary">{{ dataset.name }}</h5>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="text-muted">
+                                    <i class="ti ti-user me-1"></i>
                                     {{ dataset.owner }}
-                                </p>
-                                <p class="d-flex align-items-center">
-                                    <i class="ti ti-clock me-2 mt-n1"></i>
-                                    {{ dataset.created|to_jalali_s  }}
-                                </p>
-                                {% for tag in dataset.dataset_tags|split_by:','  %}
-                                    <span class="badge bg-label-primary me-md-1 mb-2" >{{ tag }}</span>
-                                {% endfor %}
+                                </span>
+                                <span class="text-muted">•</span>
+                                <span class="text-muted">
+                                    <i class="ti ti-calendar me-1"></i>
+                                    {{ dataset.created|to_jalali_s }}
+                                </span>
                             </div>
                         </div>
                     </div>
-                    {% endfor %}
+
+                    <!-- Tags -->
+                    <div class="mb-3">
+                        {% for tag in dataset.dataset_tags|split_by:',' %}
+                            <span class="badge bg-label-primary me-1 mb-1">{{ tag }}</span>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Stats Bar -->
+                    <div class="d-flex flex-wrap gap-4">
+                        <div class="d-flex align-items-center">
+                            <div class="avatar avatar-sm bg-label-success rounded me-2">
+                                <i class="ti ti-heart"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">لایک‌ها</small>
+                                <span class="fw-semibold" id="total_likes">{{ dataset.total_likes }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar avatar-sm bg-label-info rounded me-2">
+                                <i class="ti ti-file"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">تعداد فایل</small>
+                                <span class="fw-semibold">{{ dataset.filesCount|default:"-" }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <div class="avatar avatar-sm bg-label-warning rounded me-2">
+                                <i class="ti ti-database"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">حجم</small>
+                                <span class="fw-semibold">{{ dataset.size|filesizeformat|default:"-" }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex flex-column gap-2">
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 justify-content-md-end">
+                            <a onclick="dataset_like({{ dataset.id }})" href="#" class="btn btn-outline-primary">
+                                {% if request.user in dataset.likes.all %}
+                                    <i id="like_heart" class="ti ti-heart-filled me-1"></i>
+                                {% else %}
+                                    <i id="like_heart" class="ti ti-heart me-1"></i>
+                                {% endif %}
+                                لایک
+                            </a>
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="ti ti-share me-1"></i>
+                                    اشتراک‌گذاری
+                                </button>
+                                <div class="dropdown-menu">
+                                    {% post_to_telegram dataset.get_absolute_url "تلگرام" "dropdown-item" %}
+                                    {% post_to_whatsapp dataset.get_absolute_url "واتس‌اپ" "dropdown-item" %}
+                                    {% post_to_twitter dataset.get_absolute_url "توییتر" "dropdown-item" %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Action Button -->
+                        {% if request.user.is_authenticated %}
+                            {% if dataset.requestRequired == 'Yes' %}
+                                <form method="post" class="mt-2">
+                                    {% csrf_token %}
+                                    <button name="submit_dataset_request" class="btn btn-primary btn-lg w-100" type="submit">
+                                        <i class="ti ti-shopping-cart me-1"></i>
+                                        ثبت درخواست دریافت/خرید
+                                    </button>
+                                </form>
+                            {% else %}
+                                <a class="btn btn-primary btn-lg w-100 mt-2" target="_blank" href="{% url 'dataset:dataset_download_fa' pk=dataset.id %}">
+                                    <i class="ti ti-download me-1"></i>
+                                    دریافت/خرید دیتاست
+                                </a>
+                            {% endif %}
+                        {% endif %}
+
+                        <!-- Price Badge -->
+                        <div class="mt-2">
+                            <span class="badge bg-success fs-6">
+                                {% if dataset.price != 0 %}
+                                    {{ dataset.price|floatformat:"0"|intcomma }} تومان
+                                {% else %}
+                                    رایگان
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-<!-- / Sections:End -->
 
-<!-- Chat Vendors JS -->
-<script src="{% static 'vendor/libs/bootstrap-maxlength/bootstrap-maxlength.js' %}"></script>
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Description Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-info-circle me-2"></i>
+                        توضیحات
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dataset.desc %}
+                        <div class="{% if dataset.language == 'fa' %}text-end{% else %}text-start{% endif %}">
+                            <p class="mb-0" style="line-height: 1.8; text-align: justify;">
+                                {{ dataset.desc|linebreaksbr }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">هیچ توضیحی برای این مجموعه داده وجود ندارد</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dataset Structure -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-layout-grid me-2"></i>
+                        ساختار دیتاست
+                    </h5>
+
+                        <a target="_blank" href="{% url 'dataset:dataset_files_fa' pk=dataset.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-eye me-1"></i>
+                            نمایش اطلاعات توصیفی
+                        </a>
+
+                </div>
+                <div class="card-body">
+                    {% if dataset.columnDataType %}
+                        <div class="bg-light rounded p-3">
+                            <pre class="mb-0" style="font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 0.875rem; direction: ltr;">
+{{ dataset.columnDataType }}
+                            </pre>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">هیچ اطلاعاتی درباره ساختار داده‌ها موجود نیست</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-message-circle me-2"></i>
+                        نظرات کاربران
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dataset.comments.all %}
+                        <div class="chat-history">
+                            {% for comment in dataset.comments.all %}
+                                <div class="d-flex align-items-start mb-4">
+                                    <div class="flex-shrink-0">
+                                        {% if comment.user.profile.image %}
+                                            <img src="{{ comment.user.profile.image.url }}" class="rounded-circle" width="40" height="40" alt="avatar">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/avatars/2.png' %}" class="rounded-circle" width="40" height="40" alt="avatar">
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0">{{ comment.user.username }}</h6>
+                                            <small class="text-muted">{{ comment.Date|to_jalali_s }}</small>
+                                        </div>
+                                        <p class="mb-0 text-muted">{{ comment.text }}</p>
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}<hr>{% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="ti ti-message-off fs-2 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">هنوز نظری ثبت نشده است</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Comment Form -->
+                    {% if request.user.is_authenticated %}
+                        <div class="border-top pt-4 mt-4">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <textarea name="text" id="text" class="form-control" rows="3" placeholder="نظر خود را اینجا بنویسید..." required></textarea>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" name="submit_dataset_comment" class="btn btn-primary">
+                                        <i class="ti ti-send me-1"></i>
+                                        ارسال نظر
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Dataset Details Card -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-info-square-rounded me-2"></i>
+                        مشخصات فنی
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-table-filled me-2"></i>
+                                تعداد رکورد
+                            </span>
+                            <span class="fw-semibold">{{ dataset.recordsNum|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-file-type-csv me-2"></i>
+                                فرمت
+                            </span>
+                            <span class="fw-semibold">{{ dataset.format|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-language me-2"></i>
+                                زبان
+                            </span>
+                            <span class="fw-semibold">{{ dataset.language|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-license me-2"></i>
+                                لایسنس
+                            </span>
+                            <span class="fw-semibold">{{ dataset.license|default:"-" }}</span>
+                        </div>
+                        {% if dataset.refLink %}
+                        <div class="list-group-item px-0">
+                            <span class="text-muted d-block mb-1">
+                                <i class="ti ti-link me-2"></i>
+                                لینک مرجع
+                            </span>
+                            <a href="{{ dataset.refLink }}" target="_blank" class="text-truncate d-block">
+                                {{ dataset.refLink|truncatechars:30 }}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Products -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-apps me-2"></i>
+                        محصولات مرتبط
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="nav-align-top">
+                        <ul class="nav nav-tabs" role="tablist">
+                            {% if dataset.products.all|has_product_type:"Paper" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link active" role="tab" data-bs-toggle="tab" data-bs-target="#papers">مقالات</button>
+                            </li>
+                            {% endif %}
+                            {% if dataset.products.all|has_product_type:"Model" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link {% if not dataset.products.all|has_product_type:'Paper' %}active{% endif %}" role="tab" data-bs-toggle="tab" data-bs-target="#models">مدل‌ها</button>
+                            </li>
+                            {% endif %}
+                            {% if dataset.products.all|has_product_type:"Service" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link {% if not dataset.products.all|has_product_type:'Paper' and not dataset.products.all|has_product_type:'Model' %}active{% endif %}" role="tab" data-bs-toggle="tab" data-bs-target="#services">سرویس‌ها</button>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <div class="tab-content">
+                            <!-- Papers Tab -->
+                            {% if dataset.products.all|has_product_type:"Paper" %}
+                            <div class="tab-pane fade show active" id="papers" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Paper' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="paper">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-primary rounded">
+                                                        <i class="ti ti-file-text"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Models Tab -->
+                            {% if dataset.products.all|has_product_type:"Model" %}
+                            <div class="tab-pane fade {% if not dataset.products.all|has_product_type:'Paper' %}show active{% endif %}" id="models" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Model' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="model">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-success rounded">
+                                                        <i class="ti ti-brain"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Services Tab -->
+                            {% if dataset.products.all|has_product_type:"Service" %}
+                            <div class="tab-pane fade {% if not dataset.products.all|has_product_type:'Paper' and not dataset.products.all|has_product_type:'Model' %}show active{% endif %}" id="services" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Service' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="service">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-warning rounded">
+                                                        <i class="ti ti-server"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Similar Datasets -->
+    {% if similar_datasets %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="ti ti-database-share me-2"></i>
+                دیتاست‌های مشابه
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for dataset in similar_datasets %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 hover-shadow">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="badge bg-label-primary">{{ dataset.language }}</span>
+                                <small class="text-muted">{{ dataset.size|filesizeformat }}</small>
+                            </div>
+                            <h6 class="card-title">
+                                <a href="{% url 'dataset:dataset_detail_fa' pk=dataset.id %}" class="text-dark">{{ dataset.name }}</a>
+                            </h6>
+                            <p class="card-text text-muted small">{{ dataset.owner }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="ti ti-clock me-1"></i>
+                                    {{ dataset.created|to_jalali_s }}
+                                </small>
+                                <div class="d-flex gap-1">
+                                    {% for tag in dataset.dataset_tags|split_by:','|slice:":2" %}
+                                        <span class="badge bg-label-secondary badge-sm">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+.hover-shadow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.badge-sm {
+    font-size: 0.7em;
+    padding: 0.3em 0.6em;
+}
+</style>
+
 <script>
 function dataset_like(dataset_id){
     var like_heart_element = document.getElementById('like_heart');
@@ -415,14 +477,12 @@ function dataset_like(dataset_id){
     $.get(`/dataset/dataset_like_fa/${dataset_id}`).then(response=>{
         total_likes_element.innerHTML = response['total_likes'];
         if(response['liked'] === true){
-            like_heart_element.className = "ti ti-heart-filled ti-sm";
+            like_heart_element.className = "ti ti-heart-filled me-1";
         }
         else {
-            like_heart_element.className = "ti ti-heart ti-sm";
+            like_heart_element.className = "ti ti-heart me-1";
         }
     })
 }
 </script>
-
-
 {% endblock %}

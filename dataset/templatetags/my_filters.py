@@ -55,9 +55,13 @@ def filesizeformat(value, precision=1):
     return "%.*f %s" % (precision, size, 'PB')
 
 
+@register.filter
+def basename(value):
+    return os.path.basename(value)
 
 
 
 @register.filter
-def basename(value):
-    return os.path.basename(value)
+def has_product_type(products, product_type):
+    """Check if products queryset contains specific product type"""
+    return products.filter(type=product_type).exists()

@@ -23,6 +23,12 @@ urlpatterns = [
 
     path("dataset_viewer_fa", MyPygWalkerView.as_view(), name="dataset_viewer_fa"),
 
+    path('dataset_files_fa/<int:pk>/', views.dataset_files_fa, name='dataset_files_fa'),
+
+    path('download_file_from_cloud', views.download_file_from_cloud, name='download_file_from_cloud'),
+
+
+
     path('dataset_ner', views.dataset_ner, name="dataset_ner"),
 
     path('dataset_annotation_request_fa/<int:pk>', views.dataset_annotation_request_fa, name="dataset_annotation_request_fa"),
@@ -33,7 +39,7 @@ urlpatterns = [
 
     path('dataset_annotation_record_fa/<int:pk>', views.dataset_annotation_record_fa, name="dataset_annotation_record_fa"),
 
-    path('download_file_from_cloud', views.download_file_from_cloud, name='download_file_from_cloud'),
+
 
 
 ]

@@ -2,6 +2,7 @@
 {% load static %}
 {% load social_share %}
 {% load my_filters %}
+{% load custom_filters %}
 
 <!-- Chat Vendors CSS -->
 <link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
@@ -25,7 +26,6 @@
                             </p>
                         </div>
 
-
                         <div class="d-flex align-items-center">
                             <div>
                                 {% for tag in dataset.dataset_tags|split_by:','  %}
@@ -33,16 +33,12 @@
                                 {% endfor %}
                             </div>
                         </div>
-
                     </div>
                     <div class="card academy-content shadow-none border">
                         <div class="p-2">
-                            <div class="cursor-pointer">
-
-                            </div>
+                            <div class="cursor-pointer"></div>
                         </div>
                         <div class="card-body">
-
                             <h5>جزئیات</h5>
                             <div class="d-flex flex-wrap">
                                 <div class="me-5">
@@ -91,111 +87,239 @@
                                         فرمت:
                                         {% if dataset.format %} {{ dataset.format }} {% else %} - {% endif %}
                                     </p>
-
                                 </div>
                             </div>
-
-
                         </div>
                     </div>
-
                 </div>
-
             </div>
         </div>
 
         <!-- Content -->
         <div class="container-xxl flex-grow-1 container-p-y">
             <div class="row">
-                <!-- Assignment Progress -->
-                <div class="col-md-6 col-xl-12 mb-4">
+                <!-- Files Download Section -->
+                <div class="col-md-12 mb-4">
                     <div class="card h-100">
                         <div class="card-header d-flex align-items-center justify-content-between">
                             <h5 class="card-title m-0 me-2">دانلود فایل های دیتاست</h5>
+                            <span class="badge bg-primary">{{ dataset.downloadLink|length }} فایل</span>
                         </div>
                         <div class="card-body">
-                            <ul class="p-0 m-0">
-                                {% for file in dataset.downloadLink %}
-                                    <li class="d-flex mb-3 pb-1">
-                                        <div class="row w-100 align-items-center">
-                                            <div class="col-9">
-                                                <div class="me-2">
-                                                     <h6 class="mb-2">{{ file.url|basename }}</h6>
-                                                    <small class="text-muted">{{ file.size_human }}</small>
-                                                    <a href="#"
-                                                       class="download-link btn btn-sm btn-primary mt-2"
-                                                       data-url="{% url 'dataset:download_file_from_cloud' %}?file_url={{ file.url|urlencode }}"
-                                                       data-progress-id="progress-{{ forloop.counter }}">
-                                                        <i class="ti ti-download me-1"></i> دانلود
-                                                    </a>
-                                                    <div class="progress mt-2 d-none" id="progress-bar-{{ forloop.counter }}">
-                                                        <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            {% if dataset.downloadLink %}
+                                <div class="row">
+                                    {% for file in dataset.downloadLink %}
+                                        <div class="col-md-6 col-lg-4 mb-4">
+                                            <div class="card file-card h-100">
+                                                <div class="card-body d-flex flex-column">
+                                                    <div class="d-flex align-items-start mb-3 flex-grow-0">
+                                                        <div class="flex-shrink-0">
+                                                            {% with file_ext=file.object_key|get_file_extension %}
+                                                                {% if file_ext == 'csv' %}
+                                                                    <span class="avatar avatar-sm bg-label-info rounded">
+                                                                        <i class="ti ti-csv ti-sm"></i>
+                                                                    </span>
+                                                                {% elif file_ext == 'parquet' %}
+                                                                    <span class="avatar avatar-sm bg-label-primary rounded">
+                                                                        <i class="ti ti-database ti-sm"></i>
+                                                                    </span>
+                                                                {% elif file_ext == 'json' %}
+                                                                    <span class="avatar avatar-sm bg-label-success rounded">
+                                                                        <i class="ti ti-code ti-sm"></i>
+                                                                    </span>
+                                                                {% elif file_ext == 'txt' %}
+                                                                    <span class="avatar avatar-sm bg-label-secondary rounded">
+                                                                        <i class="ti ti-file-text ti-sm"></i>
+                                                                    </span>
+                                                                {% else %}
+                                                                    <span class="avatar avatar-sm bg-label-warning rounded">
+                                                                        <i class="ti ti-file ti-sm"></i>
+                                                                    </span>
+                                                                {% endif %}
+                                                            {% endwith %}
+                                                        </div>
+                                                        <div class="flex-grow-1 ms-3 min-width-0"> <!-- Added min-width-0 -->
+                                                            <h6 class="mb-1 text-truncate" title="{{ file.object_key|basename }}">
+                                                                {{ file.object_key|basename }}
+                                                            </h6>
+                                                            <small class="text-muted text-truncate d-block"> <!-- Added text-truncate and d-block -->
+                                                                <i class="ti ti-file-size ti-xs me-1"></i>
+                                                                {{ file.size_human }}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="file-actions mt-auto"> <!-- Added mt-auto -->
+                                                        <a href="{% url 'dataset:download_file_from_cloud' %}?dataset_id={{ dataset.id }}&file_index={{ forloop.counter0 }}"
+                                                           class="btn btn-primary btn-sm w-100 download-link"
+                                                           data-dataset-id="{{ dataset.id }}"
+                                                           data-file-index="{{ forloop.counter0 }}"
+                                                           data-filename="{{ file.object_key|basename }}">
+                                                            <i class="ti ti-download me-1"></i>
+                                                            دانلود فایل
+                                                        </a>
+
+                                                        {% if dataset.downloadLink|length > 1 %}
+                                                        <div class="mt-2 text-center">
+                                                            <small class="text-muted">
+                                                                فایل {{ forloop.counter }} از {{ dataset.downloadLink|length }}
+                                                            </small>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+
+                                                    <!-- Progress Bar (Hidden by default) -->
+                                                    <div class="progress mt-2 d-none" id="progress-{{ forloop.counter0 }}">
+                                                        <div class="progress-bar" role="progressbar" style="width: 0%">
+                                                            <span class="progress-text">0%</span>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </li>
-                                {% endfor %}
-                            </ul>
+                                    {% endfor %}
+                                </div>
+
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <div class="avatar avatar-lg bg-label-secondary rounded-circle mb-3">
+                                        <i class="ti ti-file-off ti-lg"></i>
+                                    </div>
+                                    <h5 class="text-muted">فایلی برای دانلود موجود نیست</h5>
+                                    <p class="text-muted">این مجموعه داده شامل هیچ فایلی نمی‌باشد.</p>
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
-                <!--/ Assignment Progress -->
+                <!--/ Files Download Section -->
             </div>
         </div>
         <!--/ Content -->
     </div>
 <!-- / Sections:End -->
 
+<style>
+.file-card {
+    transition: all 0.3s ease;
+    border: 1px solid #e0e0e0;
+}
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('.download-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const downloadUrl = this.getAttribute('data-url');
-                const progressId = this.getAttribute('data-progress-id');
-                const progressBar = document.getElementById('progress-bar-' + progressId.split('-')[1]);
+.file-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: #007bff;
+}
 
-                // Show progress bar
-                progressBar.classList.remove('d-none');
-                const innerBar = progressBar.querySelector('.progress-bar');
+.progress {
+    height: 20px;
+    border-radius: 10px;
+}
 
-                // Start download
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', downloadUrl, true);
-                xhr.responseType = 'blob';
+.progress-bar {
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    position: relative;
+}
 
-                xhr.onprogress = function(event) {
-                    if (event.lengthComputable) {
-                        const percentComplete = (event.loaded / event.total) * 100;
-                        innerBar.style.width = percentComplete + '%';
-                        innerBar.textContent = Math.round(percentComplete) + '%';
-                    }
-                };
+.progress-text {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: bold;
+    color: white;
+}
 
-                xhr.onload = function() {
-                    if (xhr.status === 200) {
-                        const blob = xhr.response;
-                        const filename = downloadUrl.split('/').pop().split('?')[0];
-                        const a = document.createElement('a');
-                        a.href = window.URL.createObjectURL(blob);
-                        a.download = filename;
-                        document.body.appendChild(a);
-                        a.click();
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
 
-                    }
-                };
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
-                xhr.onerror = function() {
+.min-width-0 {
+    min-width: 0;
+}
+
+.file-card .text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Single file download with progress
+    document.querySelectorAll('.download-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const datasetId = this.getAttribute('data-dataset-id');
+            const fileIndex = this.getAttribute('data-file-index');
+            const filename = this.getAttribute('data-filename');
+            const progressBar = document.getElementById(`progress-${fileIndex}`);
+
+            // Show progress bar
+            progressBar.classList.remove('d-none');
+            const innerBar = progressBar.querySelector('.progress-bar');
+            const progressText = innerBar.querySelector('.progress-text');
+
+            // Update button state
+            this.disabled = true;
+            this.innerHTML = '<i class="ti ti-loader-2 ti-spin me-1"></i>در حال دانلود...';
+
+            // Create download URL - now it goes through Django
+            const downloadUrl = `{% url 'dataset:download_file_from_cloud' %}?dataset_id=${datasetId}&file_index=${fileIndex}`;
+
+            // Use traditional anchor click for download
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+
+            // Show progress (simulated since we can't track actual progress with anchor click)
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress <= 90) {
+                    innerBar.style.width = `${progress}%`;
+                    progressText.textContent = `${progress}%`;
+                }
+            }, 100);
+
+            // Trigger download
+            a.click();
+
+            // Cleanup and reset after a delay
+            setTimeout(() => {
+                clearInterval(progressInterval);
+                innerBar.style.width = '100%';
+                progressText.textContent = '100%';
+
+                setTimeout(() => {
+                    // Reset button and hide progress
+                    this.disabled = false;
+                    this.innerHTML = '<i class="ti ti-download me-1"></i>دانلود فایل';
                     progressBar.classList.add('d-none');
-                    alert('Download failed. Please try again.');
-                };
+                    innerBar.style.width = '0%';
+                    progressText.textContent = '0%';
+                }, 500);
 
-                xhr.send();
-            });
+                // Cleanup
+                document.body.removeChild(a);
+            }, 2000);
         });
     });
-    </script>
-
+});
+</script>
 {% endblock %}

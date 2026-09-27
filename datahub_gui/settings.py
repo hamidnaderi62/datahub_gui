@@ -166,7 +166,7 @@ handler404 = 'account.views.custom_page_not_found'
 
 CLOUD_STORAGE_CONFIG = {
     'S3_ENDPOINT': 'https://teh-1.s3.poshtiban.com',  # or your S3 endpoint
-    'ACCESS_KEY': '008CA13MP30OHQR2IX5E',
-    'SECRET_KEY': 'nBLO5dRnuBPVGZLcbuhsWkgsQRHrHKRVe9TLS89X',
+    'ACCESS_KEY': '485USE57QEU3IX49QX33',
+    'SECRET_KEY': 'fJNv6tOc5yg4HiknGTLnA1BawJDh4GMyyZnX5MEm',
     'REGION': 'us-east-1',  # or your region
 }

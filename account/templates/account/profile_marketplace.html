@@ -1,0 +1,162 @@
+{% extends 'base_profile.html' %}
+{% load static %}
+{% load my_filters %}
+
+
+{% block content %}
+    <!-- Favicon -->
+    <link href="{% static 'img/favicon/favicon.ico" rel="icon" type="image/x-icon"/>
+    <!-- Icons -->
+    <link href="{% static 'vendor/fonts/fontawesome.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/fonts/tabler-icons.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/fonts/flag-icons.css' %}" rel="stylesheet"/>
+    <!-- Core CSS -->
+    <link  href="{% static 'vendor/css/rtl/core.css' %}" rel="stylesheet"/>
+    <link  href="{% static 'vendor/css/rtl/theme-default.css' %}" rel="stylesheet"/>
+    <link href="{% static 'css/demo.css' %}" rel="stylesheet"/>
+    <!-- Vendors CSS -->
+    <link href="{% static 'vendor/libs/node-waves/node-waves.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/typeahead-js/typeahead.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/datatables-bs5/datatables.bootstrap5.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/datatables-responsive-bs5/responsive.bootstrap5.css' %}" rel="stylesheet"/>
+    <link href="{% static 'vendor/libs/datatables-checkboxes-jquery/datatables.checkboxes.css' %}" rel="stylesheet"/>
+    <!-- Page CSS -->
+    <link href="{% static 'vendor/css/pages/page-profile.css' %}" rel="stylesheet"/>
+    <!-- Helpers -->
+    <script src="{% static 'vendor/js/helpers.js' %}"></script>
+
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="{% static 'js/config.js' %}"></script>
+    <!-- Better experience of RTL -->
+    <link href="{% static 'css/rtl.css' %}" rel="stylesheet"/>
+
+
+    <div class="col-xl-12 col-lg-7 col-md-7">
+                            <!-- Activity Timeline -->
+                            <div class="nav-align-top nav-tabs-shadow mb-4">
+                                <ul class="nav nav-tabs" role="tablist">
+                                    <li class="nav-item">
+                                        <button aria-controls="navs-top-home" aria-selected="false" class="nav-link  active" data-bs-target="#navs-top-in_requests" data-bs-toggle="tab" role="tab" type="button"> درخواست های وارده</button>
+                                    </li>
+                                    <li class="nav-item">
+                                        <button aria-controls="navs-top-profile" aria-selected="false" class="nav-link" data-bs-target="#navs-top-out_requests" data-bs-toggle="tab" role="tab" type="button"> درخواست های صادره</button>
+                                    </li>
+                                </ul>
+                                <div class="tab-content">
+                                    <div class="tab-pane fade  show active" id="navs-top-in_requests" role="tabpanel">
+                                         <!-- in_requests List Style -->
+                                            <div class="col-12 col-lg-12 mb-4 mb-xl-0">
+                                                <div class="demo-inline-spacing mt-3">
+
+                                                    <div class="col-md-12 col-xl-12">
+                                                        <div class="card bg-secondary text-white mb-3">
+                                                            <div class="card-body">
+                                                                <p class="card-text">درخواستهای وارده : شامل درخواستهایی است می باشد که توسط کاربران دیگر برای خرید/دانلود دیتاستهای شما ثبت شده است</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="list-group">
+                                                        {% for in_request in in_requests %}
+                                                            <div class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer">
+                                                            <div class="w-100">
+                                                                <div class="d-flex justify-content-between">
+                                                                    <div class="user-info">
+                                                                        <h6 class="mb-1">
+                                                                            دیتاست:
+                                                                            {{ in_request.dataset.name}}
+                                                                        </h6>
+                                                                        <div class="user-status">
+                                                                            <small>
+                                                                                درخواست دهنده:
+                                                                                {{ in_request.user.username}}
+                                                                            </small>
+                                                                        </div>
+                                                                        <small>
+                                                                            تاریخ درخواست:
+                                                                            {{ in_request.requestDate |to_jalali_s }}
+                                                                        </small>
+                                                                    </div>
+                                                                    <div class="add-btn">
+                                                                        <form method="post">
+                                                                            {% csrf_token %}
+                                                                            <button type="submit" name="btn_in_request_accept" class="btn btn-primary btn-sm">پذیرش درخواست</button>
+                                                                            <button type="submit" name="btn_in_request_reject" class="btn btn-danger btn-sm">رد درخواست</button>
+                                                                            <input type="hidden"  name="request_id" value="{{ in_request.id }}" />
+                                                                        </form>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <!--/ in_requests List Style -->
+                                    </div>
+                                    <div class="tab-pane fade" id="navs-top-out_requests" role="tabpanel">
+                                      <!-- out_requests List Style -->
+                                            <div class="col-12 col-lg-12 mb-4 mb-xl-0">
+                                                <div class="demo-inline-spacing mt-3">
+
+                                                    <div class="col-md-12 col-xl-12">
+                                                        <div class="card bg-secondary text-white mb-3">
+                                                            <div class="card-body">
+                                                                <p class="card-text">درخواستهای صادره : شامل درخواستهایی است می باشد که توسط شما برای خرید/دانلود دیتاستهای کاربران دیگر ثبت شده است</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div class="list-group">
+                                                        {% for out_request in out_requests %}
+                                                            <div class="list-group-item list-group-item-action d-flex align-items-center cursor-pointer">
+                                                            <div class="w-100">
+                                                                <div class="d-flex justify-content-between">
+                                                                    <div class="user-info">
+                                                                        <h6 class="mb-1">
+                                                                            دیتاست:
+                                                                            {{ out_request.dataset.name}}
+                                                                        </h6>
+                                                                        <div class="user-status">
+                                                                            <small>
+                                                                                مالک دیتاست:
+                                                                                {{ out_request.user.username}}
+                                                                            </small>
+                                                                        </div>
+                                                                        <small>
+                                                                            تاریخ درخواست:
+                                                                            {{ out_request.requestDate |to_jalali_s }}
+                                                                        </small>
+                                                                    </div>
+                                                                    <div class="add-btn">
+                                                                        {% if out_request.responseType == 'Request' %}
+                                                                            <span class="badge bg-label-primary">درخواست شده</span>
+                                                                        {% elif out_request.responseType == 'Accept' %}
+                                                                           <span class="badge bg-label-primary"> پذیرش</span>
+                                                                            <a target="_blank" href="#" class="btn btn-primary btn-sm" > مشاهده دیتاست</a>
+                                                                        {% elif out_request.responseType == 'Reject' %}
+                                                                            <span class="badge bg-label-primary">عدم پذیرش</span>
+                                                                        {% endif %}
+
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        {% endfor %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <!--/ out_requests List Style -->
+                                    </div>
+
+                                </div>
+                            </div>
+                            <!--/ Activity Timeline -->
+
+
+                        </div>
+
+
+
+{% endblock %}

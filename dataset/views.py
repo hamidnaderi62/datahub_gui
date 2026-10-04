@@ -1,10 +1,16 @@
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, StreamingHttpResponse
 from django.shortcuts import render, get_object_or_404
-from .models import Dataset, User, Comment, PredefinedTag, Request, AnnotationRequest, AnnotationResponse
+from .models import (
+    Dataset, User, Comment, PredefinedTag, Request, AnnotationRequest,
+    AnnotationResponse, DatasetVersion, DatasetAsset, PipelineDefinition, QualityReport,
+    UploadBatch, UploadSession, UploadPart,
+)
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import redirect_to_login
+from django.views.decorators.http import require_POST
 import pandas as pd
 from fastparquet import ParquetFile
 import pygwalker as pyg
@@ -15,34 +21,50 @@ from django.utils.html import format_html
 from djangoaddicts.pygwalker.views import StaticCsvPygWalkerView
 from djangoaddicts.pygwalker.views import PygWalkerView
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from taggit.models import Tag
 from django.db.models import Count
 import math
 from django.views.generic import TemplateView
 from django.utils.safestring import mark_safe
-from django.core.exceptions import PermissionDenied
+from django.utils import timezone
+from django.utils.http import content_disposition_header
+from django.core.exceptions import PermissionDenied, ValidationError
 
 import re
 import requests
 import hashlib
+import logging
 from datetime import datetime
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from .models import Dataset
 import boto3
 from botocore.client import Config
 import uuid
 import tempfile
 import ssl
-import urllib3
 from botocore.exceptions import ClientError
+from .pipeline import enqueue_pipeline, publish_dataset_version
+from marketplace.services import has_active_entitlement
 
-# Disable SSL warnings
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+logger = logging.getLogger(__name__)
+
+def can_access_dataset(user, dataset):
+    # Paid data requires an active entitlement for a published version.
+    if user.is_authenticated and (user.is_superuser or dataset.user_id == user.pk):
+        return True
+    if dataset.price != 0:
+        return has_active_entitlement(user, dataset)
+    if dataset.requestRequired == 'No':
+        return True
+    if dataset.requestRequired != 'Yes' or not user.is_authenticated:
+        return False
+    return Request.objects.filter(
+        dataset=dataset, user=user, responseType='Accept'
+    ).exists()
 
 
 def dataset_list_fa(request):
@@ -60,11 +82,17 @@ def dataset_list_fa(request):
         datasets = paginator.get_page(1)
     except EmptyPage:
         datasets = paginator.get_page(paginator.num_pages)
-    return render(request, 'dataset/dataset_list_fa.html', {'datasets': datasets})
+    return render(request, 'dataset/dataset_list.html', {'datasets': datasets})
 
 
 def dataset_detail_fa(request, pk=None):
     dataset = get_object_or_404(Dataset.objects.prefetch_related('tags'), id=pk)
+    # Share providers need an absolute URL and this also works behind a proxy.
+    share_url = request.build_absolute_uri(
+        reverse('dataset:dataset_detail', kwargs={'pk': dataset.pk})
+    )
+    latest_version = dataset.versions.prefetch_related('assets', 'pipeline_runs').order_by('-version').first()
+    quality_report = QualityReport.objects.filter(dataset_version=latest_version).first() if latest_version else None
     tags = dataset.tags.all()
     similar_datasets = (
         Dataset.objects.filter(tags__in=tags)
@@ -72,8 +100,17 @@ def dataset_detail_fa(request, pk=None):
         .annotate(num_common_tags=Count('tags'))
         .order_by('-num_common_tags')[:3]
     )
+    context = {
+        'dataset': dataset,
+        'similar_datasets': similar_datasets,
+        'latest_version': latest_version,
+        'quality_report': quality_report,
+        'share_url': share_url,
+    }
 
     if request.method == "POST":
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
         if 'submit_dataset_comment' in request.POST:
             text = request.POST.get('text', '').strip()
             if text:
@@ -83,27 +120,79 @@ def dataset_detail_fa(request, pk=None):
                     user=request.user, sentiment_label=label, sentiment_score=score
                 )
         elif 'submit_dataset_request' in request.POST:
-            Request.objects.create(dataset=dataset, user=request.user)
+            if dataset.user_id != request.user.pk and not Request.objects.filter(
+                dataset=dataset, user=request.user
+            ).exists():
+                Request.objects.create(dataset=dataset, user=request.user)
         elif 'submit_dataset_viewer' in request.POST:
+            if not can_access_dataset(request.user, dataset):
+                raise PermissionDenied
             try:
                 df = pd.read_csv(dataset.file.path)
                 html_obj = pyg.walk(df[:10], return_html=True)
-                return render(request, 'dataset/dataset_detail_fa.html',
-                              {'dataset': dataset, 'similar_datasets': similar_datasets, 'html_obj': html_obj})
+                context['html_obj'] = html_obj
+                return render(request, 'dataset/dataset_detail.html', context)
             except FileNotFoundError:
                 raise PermissionDenied("Dataset file not found.")
 
-    return render(request, 'dataset/dataset_detail_fa.html',
-                  {'dataset': dataset, 'similar_datasets': similar_datasets})
+    return render(request, 'dataset/dataset_detail.html', context)
+
+
+@login_required
+@require_POST
+def publish_dataset_version_fa(request, version_id):
+    try:
+        version = publish_dataset_version(version_id, request.user)
+    except ValidationError as exc:
+        return JsonResponse({
+            'status': 'error',
+            'message': exc.messages[0] if exc.messages else 'Publication is not allowed.',
+            'code': 'PUBLICATION_NOT_ALLOWED',
+        }, status=400)
+    return JsonResponse({
+        'status': 'success',
+        'dataset_id': version.dataset_id,
+        'dataset_version_id': version.id,
+        'version_status': version.status,
+    })
+
+
+@login_required
+def pipeline_status(request, version_id):
+    """Return owner-scoped pipeline progress for review pages and polling clients."""
+    version = get_object_or_404(
+        DatasetVersion.objects.select_related('dataset').prefetch_related('pipeline_runs__steps'),
+        pk=version_id,
+    )
+    if not (request.user.is_superuser or version.dataset.user_id == request.user.pk):
+        raise PermissionDenied
+    run = version.pipeline_runs.order_by('-created_at').first()
+    quality = QualityReport.objects.filter(dataset_version=version).first()
+    return JsonResponse({
+        'status': 'success',
+        'dataset_id': version.dataset_id,
+        'version_id': version.id,
+        'version_status': version.status,
+        'pipeline_run_id': run.id if run else None,
+        'pipeline_status': run.status if run else None,
+        'steps': [
+            {'key': step.step_key, 'status': step.status, 'attempt': step.attempt, 'metrics': step.metrics}
+            for step in (run.steps.all() if run else [])
+        ],
+        'quality_report': quality.metrics if quality else None,
+    })
 
 
 @login_required
 def dataset_download_fa(request, pk=None):
     dataset = get_object_or_404(Dataset, id=pk)
-    return render(request, 'dataset/dataset_download_fa.html', context={'dataset': dataset})
+    if not can_access_dataset(request.user, dataset):
+        raise PermissionDenied
+    return render(request, 'dataset/dataset_download.html', context={'dataset': dataset})
 
 
 @login_required
+@require_POST
 def dataset_like_fa(request, pk):
     dataset = get_object_or_404(Dataset, id=pk)
     if request.user in dataset.likes.all():
@@ -116,54 +205,110 @@ def dataset_like_fa(request, pk):
 
 
 def predefined_tags(request):
-    dataset_tags = list(PredefinedTag.objects.values_list('tag', flat=True))
+    dataset_tags = list(PredefinedTag.objects.filter(is_active=True).values_list('tag', flat=True))
     return JsonResponse(dataset_tags, safe=False)
 
 
+@login_required
 def dataset_new_stepper_fa(request):
-    return render(request, 'dataset/dataset_new_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_new_stepper.html', context={})
 
 
+@login_required
 def dataset_define_stepper_fa(request):
-    return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_define_stepper.html', context={
+        'direct_s3_uploads': settings.DIRECT_S3_UPLOADS,
+        'direct_s3_upload_fallback': settings.DIRECT_S3_UPLOAD_FALLBACK,
+    })
 
 
+@login_required
 def dataset_load_stepper_fa(request):
-    return render(request, 'dataset/dataset_load_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_load_stepper.html', context={
+        'direct_s3_uploads': settings.DIRECT_S3_UPLOADS,
+        'direct_s3_upload_fallback': settings.DIRECT_S3_UPLOAD_FALLBACK,
+    })
 
 
-def saveTempMetaData(request):
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    if is_ajax and request.method == 'POST':
-        data = json.load(request)
-        dataset = data.get('dataset')
-        dataset_name = dataset['dataset_name']
-        dataset_owner = dataset['dataset_owner']
-        dataset_language = dataset['dataset_language']
-        dataset_license = dataset['dataset_license']
-        dataset_format = dataset['dataset_format']
-        dataset_desc = dataset['dataset_desc']
-        dataset_tags = dataset['dataset_tags']
-        dataset_columnDataType = dataset['dataset_columnDataType']
+@login_required
+@require_POST
+def save_temp_metadata(request):
+    """Create a draft dataset from JSON metadata and return a JSON response.
 
-        new_dataset = Dataset.objects.create(
-            user=request.user,
-            name=dataset_name,
-            owner=dataset_owner,
-            language=dataset_language,
-            license=dataset_license,
-            format=dataset_format,
-            recordsNum=dataset.get('dataset_recordsNum', 0),
-            price=dataset.get('dataset_price', 0),
-            requestRequired=dataset.get('dataset_requestRequired', False),
-            desc=dataset_desc,
-            dataset_tags=dataset_tags,
-            columnDataType=dataset_columnDataType,
-            datasetDate=datetime.now()
+    The chunked upload endpoint is the normal workflow path. This endpoint is
+    kept for clients that save metadata before uploading a file, but it must
+    behave like an API instead of returning an HTML page for every request.
+    """
+    if not request.content_type.startswith('application/json'):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Content-Type must be application/json'},
+            status=415,
         )
-        input_tags = dataset_tags.split(",")
-        new_dataset.tags.set(input_tags)
-    return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
+
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid JSON payload'},
+            status=400,
+        )
+
+    metadata = payload.get('dataset') if isinstance(payload, dict) else None
+    if not isinstance(metadata, dict):
+        return JsonResponse(
+            {'status': 'error', 'message': 'The dataset object is required'},
+            status=400,
+        )
+
+    required_fields = ('dataset_name', 'dataset_owner', 'dataset_language', 'dataset_format')
+    missing = [field for field in required_fields if not str(metadata.get(field, '')).strip()]
+    if missing:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Missing required fields', 'fields': missing},
+            status=400,
+        )
+
+    tags_text = str(metadata.get('dataset_tags') or '')
+    column_data = metadata.get('dataset_columnDataType') or {}
+    if isinstance(column_data, str):
+        try:
+            column_data = json.loads(column_data)
+        except json.JSONDecodeError:
+            column_data = {}
+
+    request_required = str(metadata.get('dataset_requestRequired') or 'No')
+    if request_required not in {'Yes', 'No'}:
+        request_required = 'No'
+
+    new_dataset = Dataset.objects.create(
+        user=request.user,
+        name=str(metadata['dataset_name']).strip(),
+        owner=str(metadata['dataset_owner']).strip(),
+        language=str(metadata['dataset_language']).strip(),
+        license=str(metadata.get('dataset_license') or ''),
+        format=str(metadata['dataset_format']).strip(),
+        recordsNum=str(metadata.get('dataset_recordsNum') or 0),
+        price=metadata.get('dataset_price') or 0,
+        requestRequired=request_required,
+        desc=str(metadata.get('dataset_desc') or ''),
+        dataset_tags=tags_text,
+        columnDataType=column_data,
+        datasetDate=timezone.now(),
+        status='draft',
+    )
+    tags = [tag.strip() for tag in tags_text.split(',') if tag.strip()]
+    if tags:
+        new_dataset.tags.set(tags)
+
+    return JsonResponse({
+        'status': 'success',
+        'dataset_id': new_dataset.pk,
+        'detail_url': reverse('dataset:dataset_detail', args=[new_dataset.pk]),
+    }, status=201)
+
+
+# Backwards-compatible Python import and URL name for older clients.
+saveTempMetaData = save_temp_metadata
 
 
 ###################################################
@@ -186,7 +331,7 @@ def get_s3_client():
             s3={'addressing_style': 'path'},
             retries={'max_attempts': 3, 'mode': 'standard'}
         ),
-        verify=False  # Disable SSL verification
+        verify=True
     )
     return client
 
@@ -200,7 +345,7 @@ def get_s3_resource():
         aws_access_key_id=settings.CLOUD_STORAGE_CONFIG['ACCESS_KEY'],
         aws_secret_access_key=settings.CLOUD_STORAGE_CONFIG['SECRET_KEY'],
         region_name=settings.CLOUD_STORAGE_CONFIG.get('REGION', 'us-east-1'),
-        verify=False
+        verify=True
     )
 
 
@@ -226,12 +371,10 @@ def create_user_bucket(user):
 
 
 def get_user_bucket_name(user):
-    """Generate bucket name"""
+    """Return one stable bucket per user so a batch has one storage home."""
     if not user or not user.username:
         raise ValueError("User must have a valid username")
-
-    timestamp = str(int(datetime.now().timestamp()))
-    combined_string = f"{user.username}-{timestamp}"
+    combined_string = f"{user.pk}:{user.username}".lower()
     combined_hash = hashlib.sha256(combined_string.encode()).hexdigest()[:16]
     bucket_name = f"user-{combined_hash}".lower()
     return bucket_name
@@ -257,27 +400,20 @@ def upload_via_requests(file_path, bucket_name, file_name):
     """Upload using direct HTTP requests - most reliable for MinIO"""
     try:
         with open(file_path, 'rb') as f:
-            file_content = f.read()
-
-        # Generate presigned URL for PUT
-        s3_client = get_s3_client()
-        presigned_url = s3_client.generate_presigned_url(
-            'put_object',
-            Params={
-                'Bucket': bucket_name,
-                'Key': file_name,
-                'ContentType': get_content_type(file_name)
-            },
-            ExpiresIn=3600
-        )
-
-        # Upload using requests
-        response = requests.put(
-            presigned_url,
-            data=file_content,
-            headers={'Content-Type': get_content_type(file_name)},
-            verify=False  # Disable SSL verification
-        )
+            # Generate a presigned URL and stream the file object.  Reading the
+            # whole archive into RAM made large image datasets unsafe to upload.
+            s3_client = get_s3_client()
+            presigned_url = s3_client.generate_presigned_url(
+                'put_object',
+                Params={'Bucket': bucket_name, 'Key': file_name, 'ContentType': get_content_type(file_name)},
+                ExpiresIn=3600,
+            )
+            response = requests.put(
+                presigned_url,
+                data=f,
+                headers={'Content-Type': get_content_type(file_name)},
+                verify=True,
+            )
 
         if response.status_code in [200, 204]:
             file_url = f"{settings.CLOUD_STORAGE_CONFIG['S3_ENDPOINT']}/{bucket_name}/{file_name}"
@@ -409,18 +545,21 @@ def generate_presigned_url(bucket_name, object_key, expiration=3600):
         return False, str(e)
 
 
-# Upload tracking
-upload_tracker = {}
+
+# Persistent upload sessions. Metadata and ownership live in PostgreSQL.
+MAX_UPLOAD_CHUNKS = 10000
+UPLOAD_SESSION_TTL = timedelta(hours=24)
+MAX_UPLOAD_FILES = 1000
+MAX_UPLOAD_BYTES = 1024 * 1024 * 1024 * 1024  # 1 TiB logical batch limit
+UPLOAD_PART_SIZE = 5 * 1024 * 1024
 
 
 def validate_upload_id(upload_id):
-    if not upload_id:
+    try:
+        uuid.UUID(str(upload_id))
+    except (TypeError, ValueError, AttributeError):
         return False
-    parts = upload_id.split('-', 1)
-    if len(parts) != 2:
-        return False
-    timestamp, filename = parts
-    return re.match(r'^\d+\.\d+$', timestamp) and filename
+    return True
 
 
 def sanitize_filename(filename):
@@ -431,226 +570,923 @@ def sanitize_filename(filename):
     return filename
 
 
-@csrf_exempt
-def upload_dataset(request):
+def get_upload_session(upload_id, user, lock=False):
+    if not validate_upload_id(upload_id):
+        return None
+    queryset = UploadSession.objects.filter(
+        pk=upload_id,
+        owner=user,
+        status__in=[
+            UploadSession.Status.CREATED,
+            UploadSession.Status.UPLOADING,
+        ],
+    )
+    if lock:
+        queryset = queryset.select_for_update()
+    session = queryset.first()
+    if session and session.expires_at <= timezone.now():
+        session.status = UploadSession.Status.EXPIRED
+        session.save(update_fields=['status'])
+        return None
+    return session
+
+
+def sanitize_relative_path(path, fallback=''):
+    """Keep folder context while preventing traversal or absolute paths."""
+    raw = str(path or fallback).replace('\\', '/').strip()
+    parts = [part for part in raw.split('/') if part not in ('', '.', '..')]
+    if not parts:
+        return sanitize_filename(fallback)
+    return '/'.join(sanitize_filename(part) for part in parts)
+
+
+@login_required
+@require_POST
+def create_upload_batch(request):
+    """Create one dataset/version envelope for a multi-file upload."""
     try:
-        if request.method != 'POST':
-            return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON payload'}, status=400)
 
-        if request.GET.get('finalize') == 'true':
-            return finalize_upload(request)
+    metadata = payload.get('metadata') or {}
+    files = payload.get('files') or []
+    if not isinstance(metadata, dict) or not isinstance(files, list):
+        return JsonResponse({'status': 'error', 'message': 'Metadata and files are required'}, status=400)
+    if not 1 <= len(files) <= MAX_UPLOAD_FILES:
+        return JsonResponse({'status': 'error', 'message': f'Choose between 1 and {MAX_UPLOAD_FILES} files'}, status=400)
+    name = str(metadata.get('dataset_name') or '').strip()
+    if not name:
+        return JsonResponse({'status': 'error', 'message': 'Dataset name is required'}, status=400)
 
-        file_chunk = request.FILES.get('file')
-        if not file_chunk:
-            return JsonResponse({'status': 'error', 'message': 'No file chunk received'}, status=400)
+    expected_bytes = 0
+    manifest = []
+    for item in files:
+        if not isinstance(item, dict):
+            return JsonResponse({'status': 'error', 'message': 'Invalid file manifest'}, status=400)
+        try:
+            size = int(item.get('size', 0))
+        except (TypeError, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid file size'}, status=400)
+        if size < 0:
+            return JsonResponse({'status': 'error', 'message': 'Invalid file size'}, status=400)
+        name_value = sanitize_filename(item.get('name', ''))
+        relative_path = sanitize_relative_path(item.get('relative_path'), name_value)
+        if not name_value:
+            return JsonResponse({'status': 'error', 'message': 'Every file needs a name'}, status=400)
+        expected_bytes += size
+        manifest.append({'name': name_value, 'relative_path': relative_path, 'size': size})
+    if expected_bytes > MAX_UPLOAD_BYTES:
+        return JsonResponse({'status': 'error', 'message': 'The selected batch is too large'}, status=413)
 
+    metadata = dict(metadata)
+    metadata['dataset_name'] = name
+    metadata['manifest'] = manifest
+    metadata['dataset_requestRequired'] = 'Yes' if str(metadata.get('dataset_requestRequired')).lower() in ('yes', 'true', '1') else 'No'
+    try:
+        with transaction.atomic():
+            dataset = Dataset.objects.create(
+                user=request.user,
+                code=f'pending-{uuid.uuid4().hex[:16]}',
+                name=name,
+                owner=metadata.get('dataset_owner', ''),
+                language=metadata.get('dataset_language', ''),
+                license=metadata.get('dataset_license', ''),
+                format=metadata.get('dataset_format', ''),
+                recordsNum=metadata.get('dataset_recordsNum', 0),
+                price=metadata.get('dataset_price', 0) or 0,
+                requestRequired=metadata['dataset_requestRequired'],
+                desc=metadata.get('dataset_desc', ''),
+                dataset_tags=metadata.get('dataset_tags', ''),
+                columnDataType=metadata.get('dataset_columnDataType', []),
+                filesCount=0,
+                size='0 B',
+                status='uploading',
+            )
+            if metadata.get('dataset_tags'):
+                dataset.tags.set([tag.strip() for tag in str(metadata['dataset_tags']).split(',') if tag.strip()])
+            version = DatasetVersion.objects.create(
+                dataset=dataset,
+                version=1,
+                status=DatasetVersion.Status.DRAFT,
+                pipeline_definition_version='standard-tabular:1.0.0',
+                checksum_manifest={'manifest': manifest},
+                created_by=request.user,
+            )
+            batch = UploadBatch.objects.create(
+                owner=request.user,
+                dataset=dataset,
+                dataset_version=version,
+                expected_files=len(manifest),
+                expected_bytes=expected_bytes,
+                metadata=metadata,
+                expires_at=timezone.now() + UPLOAD_SESSION_TTL,
+            )
+    except (TypeError, ValueError, IntegrityError) as exc:
+        return JsonResponse({'status': 'error', 'message': str(exc) or 'Could not create upload batch'}, status=400)
+    return JsonResponse({
+        'status': 'success',
+        'batch_id': str(batch.id),
+        'dataset_id': dataset.id,
+        'dataset_version_id': version.id,
+        'expected_files': batch.expected_files,
+        'expected_bytes': batch.expected_bytes,
+    })
+
+
+@login_required
+@require_POST
+def update_upload_batch(request):
+    """Save access/pricing choices collected after the file transfer stage."""
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON payload'}, status=400)
+    batch_id = payload.get('batch_id')
+    if not validate_upload_id(batch_id):
+        return JsonResponse({'status': 'error', 'message': 'Invalid batch ID'}, status=400)
+    batch = UploadBatch.objects.filter(pk=batch_id, owner=request.user).select_related('dataset').first()
+    if batch is None or batch.status not in (UploadBatch.Status.PROCESSING, UploadBatch.Status.COMPLETED):
+        return JsonResponse({'status': 'error', 'message': 'Upload batch is not ready for publication'}, status=409)
+    metadata = dict(batch.metadata or {})
+    metadata.update({
+        'dataset_recordsNum': str(payload.get('dataset_recordsNum', metadata.get('dataset_recordsNum', '0'))),
+        'dataset_price': str(payload.get('dataset_price', metadata.get('dataset_price', '0'))),
+        'dataset_requestRequired': 'Yes' if str(payload.get('dataset_requestRequired', metadata.get('dataset_requestRequired', 'No'))).lower() in ('yes', 'true', '1') else 'No',
+    })
+    batch.metadata = metadata
+    batch.save(update_fields=['metadata'])
+    dataset = batch.dataset
+    dataset.recordsNum = metadata['dataset_recordsNum']
+    dataset.price = metadata['dataset_price'] or 0
+    dataset.requestRequired = metadata['dataset_requestRequired']
+    dataset.save(update_fields=['recordsNum', 'price', 'requestRequired'])
+    return JsonResponse({'status': 'success', 'dataset_id': dataset.id})
+
+
+def _batch_manifest_item(batch, relative_path, file_size):
+    relative_path = sanitize_relative_path(relative_path)
+    item = next(
+        (entry for entry in (batch.metadata or {}).get('manifest', [])
+         if entry.get('relative_path') == relative_path),
+        None,
+    )
+    if item is None or int(item.get('size', -1)) != int(file_size):
+        return None, relative_path
+    return item, relative_path
+
+
+def _batch_object_key(batch, file_name):
+    return (
+        f'datasets/{batch.dataset_id}/versions/{batch.dataset_version_id}/source/'
+        f'{uuid.uuid4().hex}-{sanitize_filename(file_name)}'
+    )
+
+
+def _hash_s3_object(s3_client, bucket_name, object_key):
+    digest = hashlib.sha256()
+    response = s3_client.get_object(Bucket=bucket_name, Key=object_key)
+    body = response['Body']
+    try:
+        for chunk in iter(lambda: body.read(8 * 1024 * 1024), b''):
+            digest.update(chunk)
+    finally:
+        body.close()
+    return digest.hexdigest()
+
+
+@login_required
+@require_POST
+def create_direct_upload(request):
+    """Create an S3 multipart upload session for one batch file."""
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        batch_id = payload.get('batch_id')
+        file_size = int(payload.get('file_size', 0))
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid upload metadata'}, status=400)
+    if not validate_upload_id(batch_id) or file_size <= 0:
+        return JsonResponse({'status': 'error', 'message': 'Invalid batch or file size'}, status=400)
+    batch = UploadBatch.objects.filter(
+        pk=batch_id,
+        owner=request.user,
+        status__in=[UploadBatch.Status.CREATED, UploadBatch.Status.UPLOADING],
+    ).first()
+    if batch is None or batch.expires_at <= timezone.now():
+        return JsonResponse({'status': 'error', 'message': 'Invalid or expired upload batch'}, status=400)
+    file_name = sanitize_filename(payload.get('file_name', ''))
+    item, relative_path = _batch_manifest_item(batch, payload.get('relative_path') or file_name, file_size)
+    if item is None or not file_name:
+        return JsonResponse({'status': 'error', 'message': 'File does not match the upload manifest'}, status=400)
+    bucket_ok, bucket_result = create_user_bucket(request.user)
+    if not bucket_ok:
+        return JsonResponse({'status': 'error', 'message': 'Bucket creation failed'}, status=500)
+    object_key = _batch_object_key(batch, file_name)
+    content_type = payload.get('content_type') or get_content_type(file_name)
+    client = None
+    multipart = None
+    try:
+        client = get_s3_client()
+        multipart = client.create_multipart_upload(
+            Bucket=bucket_result,
+            Key=object_key,
+            ContentType=content_type,
+        )
+        session = UploadSession.objects.create(
+            owner=request.user,
+            batch=batch,
+            file_name=file_name,
+            multipart_upload_id=multipart['UploadId'],
+            storage_bucket=bucket_result,
+            object_key=object_key,
+            expected_size=file_size,
+            total_chunks=math.ceil(file_size / UPLOAD_PART_SIZE),
+            metadata={'relative_path': relative_path, 'original_name': file_name, 'content_type': content_type},
+            status=UploadSession.Status.UPLOADING,
+            expires_at=timezone.now() + UPLOAD_SESSION_TTL,
+        )
+        if batch.status == UploadBatch.Status.CREATED:
+            batch.status = UploadBatch.Status.UPLOADING
+            batch.save(update_fields=['status'])
+    except Exception:
+        if client is not None and multipart and multipart.get('UploadId'):
+            try:
+                client.abort_multipart_upload(
+                    Bucket=bucket_result,
+                    Key=object_key,
+                    UploadId=multipart['UploadId'],
+                )
+            except Exception:
+                logger.exception('Could not abort failed multipart creation for batch %s', batch_id)
+        logger.exception('Could not create direct multipart upload for batch %s', batch_id)
+        return JsonResponse({'status': 'error', 'message': 'Multipart upload could not start'}, status=502)
+    return JsonResponse({
+        'status': 'success',
+        'upload_id': str(session.id),
+        'multipart_upload_id': session.multipart_upload_id,
+        'bucket': bucket_result,
+        'object_key': object_key,
+        'part_size': UPLOAD_PART_SIZE,
+        'total_parts': session.total_chunks,
+    })
+
+
+@login_required
+@require_POST
+def direct_upload_part_url(request):
+    """Return one short-lived presigned URL for a multipart part."""
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        upload_id = payload.get('upload_id')
+        part_number = int(payload.get('part_number', 0))
+    except (UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid part metadata'}, status=400)
+    session = get_upload_session(upload_id, request.user)
+    if session is None or not session.multipart_upload_id:
+        return JsonResponse({'status': 'error', 'message': 'Invalid or expired multipart session'}, status=400)
+    if part_number < 1 or part_number > session.total_chunks:
+        return JsonResponse({'status': 'error', 'message': 'Invalid part number'}, status=400)
+    try:
+        url = get_s3_client().generate_presigned_url(
+            'upload_part',
+            Params={
+                'Bucket': session.storage_bucket,
+                'Key': session.object_key,
+                'UploadId': session.multipart_upload_id,
+                'PartNumber': part_number,
+            },
+            ExpiresIn=3600,
+        )
+    except Exception:
+        logger.exception('Could not create multipart part URL for session %s', session.id)
+        return JsonResponse({'status': 'error', 'message': 'Part URL could not be created'}, status=502)
+    return JsonResponse({'status': 'success', 'url': url, 'part_number': part_number})
+
+
+@login_required
+@require_POST
+def complete_direct_upload(request):
+    """Complete an S3 multipart upload and register it in the dataset batch."""
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        upload_id = payload.get('upload_id')
+        parts = payload.get('parts') or []
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid completion payload'}, status=400)
+    if not validate_upload_id(upload_id) or not isinstance(parts, list):
+        return JsonResponse({'status': 'error', 'message': 'Invalid completion metadata'}, status=400)
+    with transaction.atomic():
+        session = get_upload_session(upload_id, request.user, lock=True)
+        if session is None or not session.multipart_upload_id:
+            return JsonResponse({'status': 'error', 'message': 'Invalid or expired multipart session'}, status=400)
+        expected = list(range(1, session.total_chunks + 1))
+        normalized_parts = []
+        try:
+            for part in parts:
+                normalized_parts.append({'PartNumber': int(part['part_number']), 'ETag': str(part['etag'])})
+        except (KeyError, TypeError, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid part list'}, status=400)
+        if sorted(item['PartNumber'] for item in normalized_parts) != expected or any(not item['ETag'] for item in normalized_parts):
+            return JsonResponse({'status': 'error', 'message': 'All multipart parts are required'}, status=400)
+        normalized_parts.sort(key=lambda item: item['PartNumber'])
+        session.status = UploadSession.Status.ASSEMBLING
+        session.save(update_fields=['status'])
+    client = get_s3_client()
+    try:
+        client.complete_multipart_upload(
+            Bucket=session.storage_bucket,
+            Key=session.object_key,
+            UploadId=session.multipart_upload_id,
+            MultipartUpload={'Parts': normalized_parts},
+        )
+        head = client.head_object(Bucket=session.storage_bucket, Key=session.object_key)
+        assembled_size = int(head.get('ContentLength', -1))
+        if assembled_size != session.expected_size:
+            raise ValueError('Multipart object size mismatch')
+        source_sha256 = _hash_s3_object(client, session.storage_bucket, session.object_key)
+        result = complete_batch_asset(
+            session,
+            request,
+            session.storage_bucket,
+            session.object_key,
+            assembled_size,
+            source_sha256,
+        )
+    except Exception:
+        logger.exception('Could not complete direct multipart upload for session %s', session.id)
+        try:
+            client.abort_multipart_upload(Bucket=session.storage_bucket, Key=session.object_key, UploadId=session.multipart_upload_id)
+        except Exception:
+            try:
+                client.delete_object(Bucket=session.storage_bucket, Key=session.object_key)
+            except Exception:
+                pass
+        session.status = UploadSession.Status.FAILED
+        session.save(update_fields=['status'])
+        return JsonResponse({'status': 'error', 'message': 'Multipart completion failed'}, status=502)
+    session.status = UploadSession.Status.COMPLETED
+    session.completed_at = timezone.now()
+    session.save(update_fields=['status', 'completed_at'])
+    return JsonResponse({'status': 'success', **result})
+
+
+@login_required
+@require_POST
+def abort_direct_upload(request):
+    """Abort an incomplete browser multipart upload after a client-side failure."""
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        upload_id = payload.get('upload_id')
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({'status': 'error', 'message': 'Invalid abort payload'}, status=400)
+    session = get_upload_session(upload_id, request.user, lock=True)
+    if session is None or not session.multipart_upload_id:
+        return JsonResponse({'status': 'success'})
+    try:
+        get_s3_client().abort_multipart_upload(
+            Bucket=session.storage_bucket,
+            Key=session.object_key,
+            UploadId=session.multipart_upload_id,
+        )
+    except Exception:
+        logger.exception('Could not abort direct multipart upload for session %s', session.id)
+        return JsonResponse({'status': 'error', 'message': 'Multipart abort failed'}, status=502)
+    session.status = UploadSession.Status.FAILED
+    session.save(update_fields=['status'])
+    return JsonResponse({'status': 'success'})
+
+
+@login_required
+@require_POST
+def upload_dataset(request):
+    if request.GET.get('finalize') == 'true':
+        return finalize_upload(request)
+
+    file_chunk = request.FILES.get('file')
+    if not file_chunk:
+        return JsonResponse(
+            {'status': 'error', 'message': 'No file chunk received'},
+            status=400,
+        )
+
+    try:
         chunk_number = int(request.POST.get('chunkNumber', 0))
         total_chunks = int(request.POST.get('totalChunks', 1))
-        upload_id = request.POST.get('uploadId')
-        file_name = sanitize_filename(request.POST.get('fileName', ''))
         file_size = int(request.POST.get('fileSize', 0))
+    except (TypeError, ValueError):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid chunk metadata'},
+            status=400,
+        )
 
-        if chunk_number == 0:
-            if not file_name:
-                return JsonResponse({'status': 'error', 'message': 'Filename required'}, status=400)
+    if (
+        total_chunks < 1
+        or total_chunks > MAX_UPLOAD_CHUNKS
+        or chunk_number < 0
+        or chunk_number >= total_chunks
+        or file_size < 0
+    ):
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid chunk bounds'},
+            status=400,
+        )
 
-            upload_id = f"{datetime.now().timestamp()}-{file_name}"
-            try:
-                metadata = json.loads(request.POST.get('metadata', '{}'))
-            except json.JSONDecodeError:
-                return JsonResponse({'status': 'error', 'message': 'Invalid metadata format'}, status=400)
+    upload_id = request.POST.get('uploadId')
+    file_name = sanitize_filename(request.POST.get('fileName', ''))
+    batch = None
+    batch_id = request.POST.get('batchId')
 
-            upload_tracker[upload_id] = {
-                'file_name': file_name,
-                'file_size': file_size,
-                'total_chunks': total_chunks,
-                'chunks_received': set(),
-                'metadata': metadata,
-                'temp_files': [],
-                'created_at': datetime.now()
-            }
-
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
-            return JsonResponse({'status': 'error', 'message': 'Invalid upload ID'}, status=400)
-
-        if chunk_number in upload_tracker[upload_id]['chunks_received']:
-            return JsonResponse({'status': 'error', 'message': 'Duplicate chunk'}, status=400)
-
-        chunk_dir = f"uploads/temp/{upload_id}"
-        chunk_path = f"{chunk_dir}/chunk_{chunk_number}"
-
+    if chunk_number == 0:
+        if not file_name:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Filename required'},
+                status=400,
+            )
         try:
-            saved_path = default_storage.save(chunk_path, ContentFile(file_chunk.read()))
-        except Exception as e:
-            return JsonResponse({'status': 'error', 'message': f'Chunk save failed: {str(e)}'}, status=500)
+            metadata = json.loads(request.POST.get('metadata', '{}'))
+        except json.JSONDecodeError:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Invalid metadata format'},
+                status=400,
+            )
+        if not isinstance(metadata, dict):
+            return JsonResponse(
+                {'status': 'error', 'message': 'Metadata must be an object'},
+                status=400,
+            )
+        if batch_id:
+            if not validate_upload_id(batch_id):
+                return JsonResponse({'status': 'error', 'message': 'Invalid batch ID'}, status=400)
+            batch = UploadBatch.objects.filter(
+                pk=batch_id,
+                owner=request.user,
+                status__in=[UploadBatch.Status.CREATED, UploadBatch.Status.UPLOADING],
+            ).first()
+            if batch is None or batch.expires_at <= timezone.now():
+                return JsonResponse({'status': 'error', 'message': 'Invalid or expired upload batch'}, status=400)
+            relative_path = sanitize_relative_path(request.POST.get('relativePath'), file_name)
+            manifest_item = next(
+                (item for item in (batch.metadata or {}).get('manifest', [])
+                 if item.get('relative_path') == relative_path),
+                None,
+            )
+            if manifest_item is None or int(manifest_item.get('size', -1)) != file_size:
+                return JsonResponse({'status': 'error', 'message': 'File does not match the upload manifest'}, status=400)
+            metadata.setdefault('relative_path', relative_path)
+            metadata.setdefault('original_name', file_name)
+        session = UploadSession.objects.create(
+            owner=request.user,
+            batch=batch,
+            file_name=file_name,
+            expected_size=file_size,
+            total_chunks=total_chunks,
+            metadata=metadata,
+            status=UploadSession.Status.UPLOADING,
+            expires_at=timezone.now() + UPLOAD_SESSION_TTL,
+        )
+        upload_id = str(session.pk)
+        if batch is not None and batch.status == UploadBatch.Status.CREATED:
+            batch.status = UploadBatch.Status.UPLOADING
+            batch.save(update_fields=['status'])
+    else:
+        session = get_upload_session(upload_id, request.user)
+        if session is None:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Invalid or expired upload ID'},
+                status=400,
+            )
+        if session.total_chunks != total_chunks:
+            return JsonResponse(
+                {'status': 'error', 'message': 'Chunk count does not match upload session'},
+                status=400,
+            )
+        if batch_id and str(session.batch_id) != str(batch_id):
+            return JsonResponse({'status': 'error', 'message': 'Batch does not match upload session'}, status=400)
 
-        upload_tracker[upload_id]['chunks_received'].add(chunk_number)
-        upload_tracker[upload_id]['temp_files'].append(saved_path)
+    if session is None:
+        session = get_upload_session(upload_id, request.user)
+    if session is None:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Invalid or expired upload ID'},
+            status=400,
+        )
 
-        return JsonResponse({
-            'status': 'success',
-            'upload_id': upload_id,
-            'received_chunks': sorted(upload_tracker[upload_id]['chunks_received'])
-        })
+    if UploadPart.objects.filter(
+        upload_session=session,
+        chunk_number=chunk_number,
+    ).exists():
+        return JsonResponse(
+            {'status': 'error', 'message': 'Duplicate chunk'},
+            status=400,
+        )
 
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+    chunk_path = f"uploads/temp/{session.pk}/chunk_{chunk_number}"
+    try:
+        saved_path = default_storage.save(
+            chunk_path,
+            ContentFile(file_chunk.read()),
+        )
+        try:
+            UploadPart.objects.create(
+                upload_session=session,
+                chunk_number=chunk_number,
+                storage_path=saved_path,
+                byte_size=file_chunk.size,
+            )
+        except IntegrityError:
+            if default_storage.exists(saved_path):
+                default_storage.delete(saved_path)
+            return JsonResponse(
+                {'status': 'error', 'message': 'Duplicate chunk'},
+                status=400,
+            )
+    except Exception:
+        return JsonResponse(
+            {'status': 'error', 'message': 'Chunk save failed'},
+            status=500,
+        )
+
+    received_chunks = list(
+        session.parts.order_by('chunk_number').values_list(
+            'chunk_number',
+            flat=True,
+        )
+    )
+    return JsonResponse({
+        'status': 'success',
+        'upload_id': str(session.pk),
+        'received_chunks': received_chunks,
+    })
+
+
+def complete_batch_asset(upload_info, request, bucket_name, object_key, assembled_size, source_sha256):
+    """Persist one asset and finish the dataset pipeline when the batch is complete."""
+    batch = upload_info.batch
+    with transaction.atomic():
+        batch = UploadBatch.objects.select_for_update().select_related(
+            'dataset', 'dataset_version'
+        ).get(pk=batch.pk, owner=request.user)
+        if batch.status in (UploadBatch.Status.COMPLETED, UploadBatch.Status.PROCESSING):
+            raise ValidationError('Upload batch is already complete')
+        metadata = dict(batch.metadata or {})
+        links = list(batch.dataset.downloadLink or [])
+        version_manifest = dict(batch.dataset_version.checksum_manifest or {})
+        privacy_plan = metadata.get('privacy_plan')
+        if isinstance(privacy_plan, dict):
+            # Keep the exact client transformation receipt with the immutable
+            # version. The worker still validates the uploaded artifact before
+            # publication; this is provenance, not a trust boundary.
+            version_manifest['privacy_plan'] = privacy_plan
+            batch.dataset_version.checksum_manifest = version_manifest
+            batch.dataset_version.save(update_fields=['checksum_manifest'])
+        link = {
+            'url': '',
+            'bucket_name': bucket_name,
+            'object_key': object_key,
+            'relative_path': upload_info.metadata.get('relative_path', upload_info.file_name),
+            'size': assembled_size,
+            'size_human': sizeof_fmt(assembled_size),
+            'privacy_applied': bool(privacy_plan),
+        }
+        DatasetAsset.objects.create(
+            dataset_version=batch.dataset_version,
+            kind=DatasetAsset.Kind.SOURCE,
+            object_key=object_key,
+            storage_bucket=bucket_name,
+            original_name=upload_info.file_name,
+            relative_path=link['relative_path'],
+            media_type=get_content_type(upload_info.file_name),
+            byte_size=assembled_size,
+            sha256=source_sha256,
+            status='quarantined',
+        )
+        links.append(link)
+        completed_files = batch.completed_files + 1
+        completed_bytes = batch.completed_bytes + assembled_size
+        all_uploaded = completed_files >= batch.expected_files
+        batch.completed_files = completed_files
+        batch.completed_bytes = completed_bytes
+        batch.status = UploadBatch.Status.PROCESSING if all_uploaded else UploadBatch.Status.UPLOADING
+        if all_uploaded:
+            batch.completed_at = timezone.now()
+        batch.save(update_fields=['completed_files', 'completed_bytes', 'status', 'completed_at'])
+
+        dataset = batch.dataset
+        dataset.filesCount = completed_files
+        dataset.size = sizeof_fmt(completed_bytes)
+        dataset.downloadLink = links
+        dataset.code = bucket_name
+        dataset.status = 'quarantined' if all_uploaded else 'uploading'
+        dataset.save(update_fields=['filesCount', 'size', 'downloadLink', 'code', 'status'])
+
+        pipeline_run = None
+        if all_uploaded:
+            has_privacy_plan = isinstance(metadata.get('privacy_plan'), dict)
+            pipeline_name = 'standard-tabular-privacy' if has_privacy_plan else 'standard-tabular'
+            if batch.dataset_version.pipeline_definition_version != f'{pipeline_name}:1.0.0':
+                batch.dataset_version.pipeline_definition_version = f'{pipeline_name}:1.0.0'
+                batch.dataset_version.save(update_fields=['pipeline_definition_version'])
+            pipeline_definition, _ = PipelineDefinition.objects.update_or_create(
+                name=pipeline_name,
+                version='1.0.0',
+                defaults={'definition': {'steps': ['checksum', 'privacy_receipt', 'quality'] if has_privacy_plan else ['checksum', 'quality']}, 'is_active': True},
+            )
+            pipeline_run, _ = enqueue_pipeline(
+                batch.dataset_version.id,
+                pipeline_definition.id,
+                requested_by=request.user,
+            )
+    return {
+        'download_link': link,
+        'dataset_id': batch.dataset_id,
+        'dataset_version_id': batch.dataset_version_id,
+        'batch_id': str(batch.id),
+        'completed_files': completed_files,
+        'expected_files': batch.expected_files,
+        'completed_bytes': completed_bytes,
+        'batch_complete': all_uploaded,
+        'pipeline_run_id': pipeline_run.id if pipeline_run else None,
+        'pipeline_status': pipeline_run.status if pipeline_run else None,
+        'metadata': metadata,
+    }
 
 
 def finalize_upload(request):
-    try:
-        upload_id = request.GET.get('uploadId')
-        if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
+    upload_id = request.GET.get('uploadId')
+    if not validate_upload_id(upload_id):
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Invalid upload ID',
+            'code': 'INVALID_UPLOAD_ID',
+        }, status=400)
+
+    with transaction.atomic():
+        upload_info = get_upload_session(upload_id, request.user, lock=True)
+        if upload_info is None:
             return JsonResponse({
                 'status': 'error',
-                'message': 'Invalid upload ID',
+                'message': 'Invalid or expired upload ID',
                 'code': 'INVALID_UPLOAD_ID',
             }, status=400)
 
-        upload_info = upload_tracker[upload_id]
-
-        expected_chunks = set(range(upload_info['total_chunks']))
-        if upload_info['chunks_received'] != expected_chunks:
-            missing = expected_chunks - upload_info['chunks_received']
-            cleanup_upload(upload_id)
+        expected_chunks = set(range(upload_info.total_chunks))
+        received_chunks = set(
+            upload_info.parts.values_list('chunk_number', flat=True)
+        )
+        if received_chunks != expected_chunks:
+            missing = sorted(expected_chunks - received_chunks)
+            cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
             return JsonResponse({
                 'status': 'error',
-                'message': f'Missing chunks: {sorted(missing)}',
+                'message': f'Missing chunks: {missing}',
                 'code': 'MISSING_CHUNKS',
             }, status=400)
 
-        final_dir = os.path.join("uploads", datetime.now().strftime('%Y'),
-                                 datetime.now().strftime('%m'),
-                                 datetime.now().strftime('%d'))
-        final_path = os.path.join(final_dir, upload_info['file_name'])
+        upload_info.status = UploadSession.Status.ASSEMBLING
+        upload_info.save(update_fields=['status'])
 
-        try:
-            os.makedirs(os.path.dirname(default_storage.path(final_path)), exist_ok=True)
-            with open(default_storage.path(final_path), 'wb') as final_file:
-                for i in range(upload_info['total_chunks']):
-                    chunk_path = os.path.join("uploads", "temp", upload_id, f"chunk_{i}")
-                    with open(default_storage.path(chunk_path), 'rb') as chunk_file:
-                        final_file.write(chunk_file.read())
-        except Exception as assembly_error:
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'File assembly failed: {str(assembly_error)}',
-                'code': 'FILE_ASSEMBLY_FAILED',
-            }, status=500)
+    final_dir = os.path.join(
+        'uploads',
+        timezone.now().strftime('%Y'),
+        timezone.now().strftime('%m'),
+        timezone.now().strftime('%d'),
+    )
+    final_path = os.path.join(final_dir, upload_info.file_name)
 
-        assembled_path = default_storage.path(final_path)
-        if not os.path.exists(assembled_path):
-            cleanup_upload(upload_id)
-            return JsonResponse({
-                'status': 'error',
-                'message': 'Assembled file not found',
-                'code': 'FILE_NOT_FOUND',
-            }, status=500)
-
-        assembled_size = os.path.getsize(assembled_path)
-        if assembled_size != upload_info['file_size']:
-            cleanup_upload(upload_id)
-            if os.path.exists(assembled_path):
-                os.remove(assembled_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'File size mismatch: expected {upload_info["file_size"]}, got {assembled_size}',
-                'code': 'FILE_SIZE_MISMATCH',
-            }, status=400)
-
-        bucket_success, bucket_result = create_user_bucket(request.user)
-        if not bucket_success:
-            cleanup_upload(upload_id)
-            if os.path.exists(assembled_path):
-                os.remove(assembled_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Bucket creation failed: {bucket_result}',
-                'code': 'BUCKET_CREATION_FAILED',
-            }, status=500)
-
-        upload_success, upload_result = upload_to_user_bucket(
-            assembled_path,
-            bucket_result,
-            upload_info['file_name']
+    try:
+        os.makedirs(
+            os.path.dirname(default_storage.path(final_path)),
+            exist_ok=True,
         )
+        with open(default_storage.path(final_path), 'wb') as final_file:
+            for part in upload_info.parts.order_by('chunk_number'):
+                with open(default_storage.path(part.storage_path), 'rb') as chunk_file:
+                    final_file.write(chunk_file.read())
+    except Exception:
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'File assembly failed',
+            'code': 'FILE_ASSEMBLY_FAILED',
+        }, status=500)
 
-        if not upload_success:
-            cleanup_upload(upload_id)
-            if os.path.exists(assembled_path):
-                os.remove(assembled_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Cloud upload failed: {upload_result}',
-                'code': 'CLOUD_UPLOAD_FAILED',
-            }, status=500)
+    assembled_path = default_storage.path(final_path)
+    if not os.path.exists(assembled_path):
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Assembled file not found',
+            'code': 'FILE_NOT_FOUND',
+        }, status=500)
 
-        download_link = {
-            "url": '', # didnt need url
-            "bucket_name": bucket_result,
-            "object_key": upload_info['file_name'],
-            "size": upload_info['file_size'],
-            "size_human": sizeof_fmt(upload_info['file_size'])
-        }
+    assembled_size = os.path.getsize(assembled_path)
+    if assembled_size != upload_info.expected_size:
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        if os.path.exists(assembled_path):
+            os.remove(assembled_path)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'File size mismatch',
+            'code': 'FILE_SIZE_MISMATCH',
+        }, status=400)
 
+    source_sha256 = file_sha256(assembled_path)
+    bucket_success, bucket_result = create_user_bucket(request.user)
+    if not bucket_success:
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        if os.path.exists(assembled_path):
+            os.remove(assembled_path)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Bucket creation failed',
+            'code': 'BUCKET_CREATION_FAILED',
+        }, status=500)
+
+    object_key = upload_info.file_name
+    if upload_info.batch_id:
+        object_key = (
+            f'datasets/{upload_info.batch.dataset_id}/versions/'
+            f'{upload_info.batch.dataset_version_id}/source/'
+            f'{uuid.uuid4().hex}-{upload_info.file_name}'
+        )
+    upload_success, upload_result = upload_to_user_bucket(
+        assembled_path,
+        bucket_result,
+        object_key,
+    )
+    if not upload_success:
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        if os.path.exists(assembled_path):
+            os.remove(assembled_path)
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Cloud upload failed',
+            'code': 'CLOUD_UPLOAD_FAILED',
+        }, status=500)
+
+    if upload_info.batch_id:
         try:
-            with transaction.atomic():
-                metadata = upload_info['metadata']
-                dataset = Dataset.objects.create(
-                    user=request.user,
-                    code=bucket_result,
-                    name=metadata.get('dataset_name', ''),
-                    owner=metadata.get('dataset_owner', ''),
-                    language=metadata.get('dataset_language', ''),
-                    license=metadata.get('dataset_license', ''),
-                    format=metadata.get('dataset_format', ''),
-                    recordsNum=metadata.get('dataset_recordsNum', 0),
-                    price=float(metadata.get('dataset_price', 0)),
-                    requestRequired=metadata.get('dataset_requestRequired', False),
-                    desc=metadata.get('dataset_desc', ''),
-                    dataset_tags=metadata.get('dataset_tags', ''),
-                    columnDataType=metadata.get('dataset_columnDataType', ''),
-                    downloadLink=[download_link],
-                    filesCount=1,
-                    size=upload_info['file_size']
-                )
-
-                if metadata.get('dataset_tags'):
-                    tags = [t.strip() for t in metadata['dataset_tags'].split(',') if t.strip()]
-                    dataset.tags.set(tags)
-
-        except Exception as db_error:
-            cleanup_upload(upload_id)
+            result = complete_batch_asset(
+                upload_info,
+                request,
+                bucket_result,
+                object_key,
+                assembled_size,
+                source_sha256,
+            )
+        except ValidationError as exc:
+            cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
             if os.path.exists(assembled_path):
                 os.remove(assembled_path)
-            return JsonResponse({
-                'status': 'error',
-                'message': f'Database error: {str(db_error)}',
-                'code': 'DATABASE_ERROR',
-            }, status=500)
-
+            return JsonResponse({'status': 'error', 'message': str(exc)}, status=409)
+        except Exception:
+            cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+            if os.path.exists(assembled_path):
+                os.remove(assembled_path)
+            return JsonResponse({'status': 'error', 'message': 'Database error', 'code': 'DATABASE_ERROR'}, status=500)
+        upload_info.status = UploadSession.Status.COMPLETED
+        upload_info.completed_at = timezone.now()
+        upload_info.save(update_fields=['status', 'completed_at'])
         cleanup_upload(upload_id)
         if os.path.exists(assembled_path):
             os.remove(assembled_path)
+        return JsonResponse({'status': 'success', **result})
 
-        return JsonResponse({
-            'status': 'success',
-            'download_link': download_link,
-            'dataset_id': dataset.id,
-            'metadata': metadata,
-            'bucket': bucket_result
-        })
+    download_link = {
+        'url': '',
+        'bucket_name': bucket_result,
+        'object_key': object_key,
+        'size': upload_info.expected_size,
+        'size_human': sizeof_fmt(upload_info.expected_size),
+    }
 
-    except Exception as unexpected_error:
-        import traceback
-        error_details = traceback.format_exc()
-        print(f"Unexpected error in finalize_upload: {error_details}")
+    try:
+        with transaction.atomic():
+            metadata = upload_info.metadata
+            dataset = Dataset.objects.create(
+                user=request.user,
+                code=bucket_result,
+                name=metadata.get('dataset_name', ''),
+                owner=metadata.get('dataset_owner', ''),
+                language=metadata.get('dataset_language', ''),
+                license=metadata.get('dataset_license', ''),
+                format=metadata.get('dataset_format', ''),
+                recordsNum=metadata.get('dataset_recordsNum', 0),
+                price=metadata.get('dataset_price', 0),
+                requestRequired=metadata.get('dataset_requestRequired', False),
+                desc=metadata.get('dataset_desc', ''),
+                dataset_tags=metadata.get('dataset_tags', ''),
+                columnDataType=metadata.get('dataset_columnDataType', ''),
+                downloadLink=[download_link],
+                filesCount=1,
+                size=upload_info.expected_size,
+                status='quarantined',
+            )
+            if metadata.get('dataset_tags'):
+                tags = [
+                    tag.strip()
+                    for tag in metadata['dataset_tags'].split(',')
+                    if tag.strip()
+                ]
+                dataset.tags.set(tags)
+            version = DatasetVersion.objects.create(
+                dataset=dataset,
+                version=1,
+                status=DatasetVersion.Status.DRAFT,
+                pipeline_definition_version='standard-tabular:1.0.0',
+                checksum_manifest={
+                    'source_sha256': source_sha256,
+                    'source_size': assembled_size,
+                },
+                created_by=request.user,
+            )
+            DatasetAsset.objects.create(
+                dataset_version=version,
+                kind=DatasetAsset.Kind.SOURCE,
+                object_key=upload_info.file_name,
+                storage_bucket=bucket_result,
+                original_name=upload_info.file_name,
+                media_type=get_content_type(upload_info.file_name),
+                byte_size=assembled_size,
+                sha256=source_sha256,
+                status='quarantined',
+            )
+            pipeline_definition, _ = PipelineDefinition.objects.update_or_create(
+                name='standard-tabular',
+                version='1.0.0',
+                defaults={
+                    'definition': {
+                        'steps': ['checksum', 'quality'],
+                    },
+                    'is_active': True,
+                },
+            )
+            pipeline_run, _ = enqueue_pipeline(
+                version.id,
+                pipeline_definition.id,
+                requested_by=request.user,
+            )
+    except Exception:
+        cleanup_upload(upload_id, status=UploadSession.Status.FAILED)
+        if os.path.exists(assembled_path):
+            os.remove(assembled_path)
         return JsonResponse({
             'status': 'error',
-            'message': f'Unexpected error: {str(unexpected_error)}',
-            'code': 'UNEXPECTED_ERROR',
+            'message': 'Database error',
+            'code': 'DATABASE_ERROR',
         }, status=500)
+
+    upload_info.status = UploadSession.Status.COMPLETED
+    upload_info.completed_at = timezone.now()
+    upload_info.save(update_fields=['status', 'completed_at'])
+    cleanup_upload(upload_id)
+    if os.path.exists(assembled_path):
+        os.remove(assembled_path)
+
+    return JsonResponse({
+        'status': 'success',
+        'download_link': download_link,
+        'dataset_id': dataset.id,
+        'metadata': metadata,
+        'bucket': bucket_result,
+        'dataset_version_id': version.id,
+        'pipeline_run_id': pipeline_run.id,
+        'pipeline_status': pipeline_run.status,
+    })
+
+
+def cleanup_upload(upload_id, status=None):
+    session = UploadSession.objects.filter(pk=upload_id).first()
+    if session is None:
+        return
+    # Native multipart uploads have no UploadPart rows. Abort them explicitly
+    # when a session expires or fails so incomplete object-store parts do not
+    # accumulate until the bucket lifecycle rule runs.
+    if session.multipart_upload_id and session.storage_bucket and session.object_key:
+        try:
+            get_s3_client().abort_multipart_upload(
+                Bucket=session.storage_bucket,
+                Key=session.object_key,
+                UploadId=session.multipart_upload_id,
+            )
+        except Exception:
+            # Cleanup is best-effort; the scheduled object-store lifecycle
+            # policy remains the final safety net.
+            pass
+    for part in session.parts.all():
+        if default_storage.exists(part.storage_path):
+            default_storage.delete(part.storage_path)
+    session.parts.all().delete()
+    if status is not None:
+        session.status = status
+        session.save(update_fields=['status'])
+
+def file_sha256(file_path, chunk_size=1024 * 1024):
+    digest = hashlib.sha256()
+    with open(file_path, 'rb') as file_data:
+        for chunk in iter(lambda: file_data.read(chunk_size), b''):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def sizeof_fmt(num, suffix='B'):
@@ -659,14 +1495,6 @@ def sizeof_fmt(num, suffix='B'):
             return "%3.1f %s%s" % (num, unit, suffix)
         num /= 1024.0
     return "%.1f %s%s" % (num, 'Y', suffix)
-
-
-def cleanup_upload(upload_id):
-    if upload_id in upload_tracker:
-        for chunk_path in upload_tracker[upload_id]['temp_files']:
-            if default_storage.exists(chunk_path):
-                default_storage.delete(chunk_path)
-        del upload_tracker[upload_id]
 
 
 # Rest of the code remains the same for Dataset Viewer, Annotation, etc.
@@ -690,7 +1518,13 @@ from .models import Dataset
 
 
 class MyPygWalkerView1(TemplateView):
-    template_name = "dataset/dataset_viewer_fa.html"
+    template_name = "dataset/dataset_viewer.html"
+
+    def get_context_data(self, **kwargs):
+        dataset = get_object_or_404(Dataset, id=self.request.GET.get('dataset_id'))
+        if not can_access_dataset(self.request.user, dataset):
+            raise PermissionDenied
+        return super().get_context_data(**kwargs)
 
     def get_download_info(self, download_links, file_index=0):
         """Extract file info from dataset's downloadLink by index"""
@@ -892,6 +1726,8 @@ class MyPygWalkerView1(TemplateView):
 
         except Dataset.DoesNotExist:
             context['error'] = "Dataset not found"
+        except PermissionDenied:
+            raise
         except Exception as e:
             print(f"Unexpected error: {str(e)}")
             context['error'] = f"An unexpected error occurred: {str(e)}"
@@ -900,7 +1736,13 @@ class MyPygWalkerView1(TemplateView):
 
 
 class MyPygWalkerView(TemplateView):
-    template_name = "dataset/dataset_viewer_fa.html"
+    template_name = "dataset/dataset_viewer.html"
+
+    def get_context_data(self, **kwargs):
+        dataset = get_object_or_404(Dataset, id=self.request.GET.get('dataset_id'))
+        if not can_access_dataset(self.request.user, dataset):
+            raise PermissionDenied
+        return super().get_context_data(**kwargs)
 
     def get_download_info(self, download_links, file_index=0):
         """Extract file info from dataset's downloadLink by index"""
@@ -1100,6 +1942,8 @@ class MyPygWalkerView(TemplateView):
 
         except Dataset.DoesNotExist:
             context['error'] = "Dataset not found"
+        except PermissionDenied:
+            raise
         except Exception as e:
             print(f"Unexpected error: {str(e)}")
             context['error'] = f"An unexpected error occurred: {str(e)}"
@@ -1114,10 +1958,12 @@ def dataset_files_fa(request, pk=None):
     dataset_id = pk or request.GET.get('dataset_id')
 
     if not dataset_id:
-        return render(request, 'dataset/dataset_files_fa.html', {'error': 'No dataset ID provided'})
+        return render(request, 'dataset/dataset_files.html', {'error': 'No dataset ID provided'})
 
     try:
-        dataset = Dataset.objects.get(id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id)
+        if not can_access_dataset(request.user, dataset):
+            raise PermissionDenied
 
         # Get download links info
         download_links = dataset.downloadLink
@@ -1199,13 +2045,15 @@ def dataset_files_fa(request, pk=None):
             except (ValueError, IndexError) as e:
                 context['error'] = f"Invalid file index: {file_index}"
 
-        return render(request, 'dataset/dataset_files_fa.html', context)
+        return render(request, 'dataset/dataset_files.html', context)
 
     except Dataset.DoesNotExist:
-        return render(request, 'dataset/dataset_files_fa.html', {'error': 'Dataset not found'})
+        return render(request, 'dataset/dataset_files.html', {'error': 'Dataset not found'})
+    except PermissionDenied:
+        raise
     except Exception as e:
         print(f"Unexpected error in dataset_files_fa: {str(e)}")
-        return render(request, 'dataset/dataset_files_fa.html', {'error': f'An unexpected error occurred: {str(e)}'})
+        return render(request, 'dataset/dataset_files.html', {'error': f'An unexpected error occurred: {str(e)}'})
 ###################################################
 # Download dataset file using Presigned URLs
 ###################################################
@@ -1216,13 +2064,18 @@ def download_file_from_cloud(request):
     Serve file through Django to avoid CORS issues
     """
     dataset_id = request.GET.get('dataset_id')
-    file_index = int(request.GET.get('file_index', 0))
+    try:
+        file_index = int(request.GET.get('file_index', 0))
+    except (TypeError, ValueError):
+        return HttpResponseRedirect('/download-error/')
 
     if not dataset_id:
         return HttpResponseRedirect('/download-error/')
 
     try:
-        dataset = Dataset.objects.get(id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id)
+        if not can_access_dataset(request.user, dataset):
+            raise PermissionDenied
         download_links = dataset.downloadLink
 
         if not download_links or not isinstance(download_links, list):
@@ -1246,27 +2099,32 @@ def download_file_from_cloud(request):
         if not success:
             return HttpResponseRedirect('/download-error/')
 
-        # Download file content
-        response = requests.get(presigned_url, stream=True)
+        response = requests.get(presigned_url, stream=True, timeout=30)
         response.raise_for_status()
-
-        # Get filename from object_key
         filename = object_key.split('/')[-1]
 
-        # Create Django response with file content
-        django_response = HttpResponse(
-            response.content,
+        def stream_file():
+            try:
+                yield from response.iter_content(chunk_size=1024 * 1024)
+            finally:
+                response.close()
+
+        django_response = StreamingHttpResponse(
+            stream_file(),
             content_type=response.headers.get('content-type', 'application/octet-stream')
         )
-
-        # Set content disposition for download
-        django_response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        django_response['Content-Length'] = len(response.content)
-
+        django_response['Content-Disposition'] = content_disposition_header(
+            as_attachment=True,
+            filename=filename,
+        )
+        if response.headers.get('content-length'):
+            django_response['Content-Length'] = response.headers['content-length']
         return django_response
 
     except Dataset.DoesNotExist:
         return HttpResponseRedirect('/download-error/')
+    except PermissionDenied:
+        raise
     except Exception as e:
         print(f"Download error: {str(e)}")
         return HttpResponseRedirect('/download-error/')
@@ -1283,7 +2141,9 @@ def get_file_info(request):
         return JsonResponse({'error': 'No dataset ID provided'}, status=400)
 
     try:
-        dataset = Dataset.objects.get(id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id)
+        if not can_access_dataset(request.user, dataset):
+            raise PermissionDenied
         download_links = dataset.downloadLink
 
         if not download_links or not isinstance(download_links, list):
@@ -1300,8 +2160,10 @@ def get_file_info(request):
 
     except Dataset.DoesNotExist:
         return JsonResponse({'error': 'Dataset not found'}, status=404)
+    except PermissionDenied:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        return JsonResponse({'error': 'Unable to retrieve file information'}, status=500)
 
 
 def check_presigned_url_validity(presigned_url):
@@ -1317,66 +2179,85 @@ def check_presigned_url_validity(presigned_url):
 # Annotation Module
 ###################################################
 
+@login_required
 def dataset_annotation_request_fa(request, pk=None):
+    dataset = get_object_or_404(Dataset, id=pk)
+    if dataset.user_id != request.user.pk and not request.user.is_superuser:
+        raise PermissionDenied
+
     if request.method == 'POST':
         if 'btn_annotation_request_cancel' in request.POST:
-            AnnotationRequest.objects.filter(id=request.POST.get('annotation_request_id')).update(
-                annotationStatus='Canceled', responseDateTime=datetime.now())
+            AnnotationRequest.objects.filter(
+                id=request.POST.get('annotation_request_id'),
+                dataset=dataset,
+            ).update(annotationStatus='Canceled', responseDateTime=datetime.now())
 
         if 'btn_annotation_response_accept' in request.POST:
-            acceptedAnnotationResponse = AnnotationResponse.objects.filter(
-                id=request.POST.get('annotation_response_id')).get()
-            annotationRequest = AnnotationRequest.objects.filter(
-                id=acceptedAnnotationResponse.annotationRequest.id).get()
-            totalFinalPrice = annotationRequest.totalRecords * acceptedAnnotationResponse.suggestedPrice
+            accepted_response = get_object_or_404(
+                AnnotationResponse.objects.select_related('annotationRequest').filter(dataset=dataset),
+                id=request.POST.get('annotation_response_id'),
+                responseType='Request',
+            )
+            annotation_request = accepted_response.annotationRequest
+            total_final_price = annotation_request.totalRecords * accepted_response.suggestedPrice
 
-            AnnotationResponse.objects.filter(annotationRequest=acceptedAnnotationResponse.annotationRequest).update(
-                responseType='Reject', responseDate=datetime.now())
-            AnnotationResponse.objects.filter(id=acceptedAnnotationResponse.id).update(responseType='Accept',
-                                                                                       responseDate=datetime.now())
-            AnnotationRequest.objects.filter(id=acceptedAnnotationResponse.annotationRequest.id).update(
-                annotationStatus='Accepted', finalPrice=acceptedAnnotationResponse.suggestedPrice,
-                totalFinalPrice=totalFinalPrice, responseDateTime=datetime.now())
+            AnnotationResponse.objects.filter(
+                annotationRequest=annotation_request
+            ).exclude(id=accepted_response.id).update(
+                responseType='Reject',
+                responseDate=datetime.now(),
+            )
+            accepted_response.responseType = 'Accept'
+            accepted_response.responseDate = datetime.now()
+            accepted_response.save(update_fields=['responseType', 'responseDate'])
+            AnnotationRequest.objects.filter(id=annotation_request.id, dataset=dataset).update(
+                annotationStatus='Accepted',
+                finalPrice=accepted_response.suggestedPrice,
+                totalFinalPrice=total_final_price,
+                responseDateTime=datetime.now(),
+            )
 
-    dataset = get_object_or_404(Dataset, id=pk)
-    annotation_requests = AnnotationRequest.objects.filter(dataset=dataset.id).order_by('-requestDateTime')
-    annotation_responses = AnnotationResponse.objects.filter(dataset=dataset.id).order_by('-responseDate')
-    return render(request, 'dataset/dataset_annotation_request_fa.html',
+    annotation_requests = AnnotationRequest.objects.filter(dataset=dataset).order_by('-requestDateTime')
+    annotation_responses = AnnotationResponse.objects.filter(dataset=dataset).order_by('-responseDate')
+    return render(request, 'dataset/dataset_annotation_request.html',
                   context={'dataset': dataset, 'annotation_requests': annotation_requests,
                            'annotation_responses': annotation_responses})
 
 
+@login_required
+@require_POST
 def create_annotation_request(request):
-    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    if is_ajax:
-        if request.method == 'POST':
-            data = json.load(request)
-            annotationReq = data.get('annotationReq')
-            print(annotationReq['annotationReq_desc'])
+    if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
-            annotationReq_dataset_id = annotationReq['annotationReq_dataset_id']
-            annotationReq_startRecord = annotationReq['annotationReq_startRecord']
-            annotationReq_endRecord = annotationReq['annotationReq_endRecord']
-            annotationReq_priceType = annotationReq['annotationReq_priceType']
-            annotationReq_estimatedPrice = annotationReq['annotationReq_estimatedPrice']
-            annotationReq_desc = annotationReq['annotationReq_desc']
-            annotationReq_labelOptions = annotationReq['annotationReq_labelOptions']
-            annotationReq_totalRecords = float(annotationReq_endRecord) - float(annotationReq_startRecord) + 1
+    try:
+        payload = json.loads(request.body)
+        annotation = payload['annotationReq']
+        start_record = int(annotation['annotationReq_startRecord'])
+        end_record = int(annotation['annotationReq_endRecord'])
+        if start_record < 1 or end_record < start_record:
+            return JsonResponse({'error': 'Invalid record range'}, status=400)
 
-            dataset = Dataset.objects.filter(id=annotationReq_dataset_id).get()
-            AnnotationRequest.objects.create(dataset=dataset
-                                             , startRecord=annotationReq_startRecord
-                                             , endRecord=annotationReq_endRecord
-                                             , totalRecords=annotationReq_totalRecords
-                                             , priceType=annotationReq_priceType
-                                             , estimatedPrice=annotationReq_estimatedPrice
-                                             , tags=dataset.dataset_tags
-                                             , desc=annotationReq_desc
-                                             , labelOptions=annotationReq_labelOptions
-                                             , requestDateTime=datetime.now()
-                                             )
-
-            return render(request, 'dataset/dataset_annotation_request_fa.html', context={})
+        dataset = get_object_or_404(
+            Dataset,
+            id=annotation['annotationReq_dataset_id'],
+            user=request.user,
+        )
+        annotation_request = AnnotationRequest.objects.create(
+            dataset=dataset,
+            user=request.user,
+            startRecord=start_record,
+            endRecord=end_record,
+            totalRecords=end_record - start_record + 1,
+            priceType=annotation.get('annotationReq_priceType', 'Pricing'),
+            estimatedPrice=annotation.get('annotationReq_estimatedPrice') or 0,
+            tags=dataset.dataset_tags,
+            desc=annotation.get('annotationReq_desc', ''),
+            labelOptions=annotation.get('annotationReq_labelOptions', []),
+        )
+        return JsonResponse({'status': 'success', 'id': annotation_request.id}, status=201)
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({'error': 'Invalid annotation request'}, status=400)
 
 
 def dataset_annotation_list_fa(request):
@@ -1390,19 +2271,26 @@ def dataset_annotation_list_fa(request):
                                                                        tags__icontains=q).select_related(
                 'dataset').order_by('-requestDateTime')
     elif request.method == "POST" and 'btn_annotation_request_accept' in request.POST:
+        if not request.user.is_authenticated:
+            return redirect_to_login(request.get_full_path())
         dataset_id = request.POST.get('dataset_id')
-        annotationRequest_id = request.POST.get('annotation_request_id')
-        annotationRes_suggestedPrice = request.POST.get('annotationRes_suggestedPrice')
-        annotationRes_text = request.POST.get('annotationRes_text')
+        annotation_request_id = request.POST.get('annotation_request_id')
+        annotation_response_price = request.POST.get('annotationRes_suggestedPrice')
+        annotation_response_text = request.POST.get('annotationRes_text')
 
-        annotationRequest = AnnotationRequest.objects.filter(id=annotationRequest_id).get()
-        dataset = Dataset.objects.filter(id=dataset_id).get()
+        annotationRequest = get_object_or_404(
+            AnnotationRequest,
+            id=annotation_request_id,
+            dataset_id=dataset_id,
+            annotationStatus='Requested',
+        )
+        dataset = annotationRequest.dataset
 
         AnnotationResponse.objects.create(dataset=dataset
                                           , annotationRequest=annotationRequest
                                           , user=request.user
-                                          , suggestedPrice=annotationRes_suggestedPrice
-                                          , text=annotationRes_text
+                                          , suggestedPrice=annotation_response_price
+                                          , text=annotation_response_text
                                           , responseDate=datetime.now()
                                           )
 
@@ -1411,19 +2299,20 @@ def dataset_annotation_list_fa(request):
     page_number = request.GET.get('page')
     paginator = Paginator(all_annotation_requests, 9)
     annotation_requests = paginator.get_page(page_number)
-    return render(request, 'dataset/dataset_annotation_list_fa.html',
+    return render(request, 'dataset/dataset_annotation_list.html',
                   context={'annotation_requests': annotation_requests})
 
 
 def dataset_annotation_record_fa(request, pk=None):
-    return render(request, 'dataset/dataset_annotation_record_fa.html', context={})
+    return render(request, 'dataset/dataset_annotation_record.html', context={})
 
 
 ###################################################
 # Debug and Test Functions
 ###################################################
 
-@csrf_exempt
+@login_required
+@require_POST
 def test_s3_connection(request):
     """Test S3 connection and upload functionality"""
     try:

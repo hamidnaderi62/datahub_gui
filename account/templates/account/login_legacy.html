@@ -1,0 +1,120 @@
+{% load static %}
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+  <!-- Meta Tags -->
+  <meta charset="utf-8" />
+  <meta http-equiv="x-ua-compatible" content="ie=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="author" content="laralink" />
+  <meta name="description" content="" />
+  <meta name="keywords" content="" />
+  <!-- Page Title -->
+  <title>Smart Cancer Login</title>
+   <!-- Favicon Icon -->
+  <link rel="icon" href="{% static 'img/favicon.png' %}" />
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/owlCarousel.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/fontawesome.min.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/flaticon.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/animate.css' %}" />
+  <link rel="stylesheet" href="{% static 'css/style.css' %}" />
+</head>
+
+<body >
+  <div id="st-preloader">
+    <div class="st-preloader-wave"></div>
+    <div class="st-preloader-wave"></div>
+    <div class="st-preloader-wave"></div>
+    <div class="st-preloader-wave"></div>
+    <div class="st-preloader-wave"></div>
+  </div>
+
+
+  
+  <!-- Start Blog Section -->
+  <div class="st-blog-wrap st-section" id="blog">
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-8 offset-lg-2 mr-auto">
+          <article class="post">
+          	<header class="entry-header">
+
+<div class="container" >
+    <form method="POST" >
+        {% csrf_token %}
+
+        <h2 style="text-align: center">
+            Login
+        </h2>
+
+        <div class="container">
+        Username
+        <input class="form-control" type="text" name="username" >
+        </div>
+        <br/>
+
+        <div class="container">
+        Password
+        <input class="form-control" type="password" name="password" >
+        </div>
+        <br/>
+        <p class="form-submit" style="text-align: center">
+            <button type="submit" class="st-btn st-style1 st-size1 st-color1"><span> Login </span></button>
+        </p>
+    </form>
+</div>
+
+
+  <!-- Start Footer Seciton -->
+  <footer class="st-site-footer st-style1 ">
+    <div class="st-main-footer text-center">
+      <div class="container">
+        <div class="st-footer-logo">
+          <img src="{% static 'img/light-img/footer-logo.png' %}" alt="demo">
+        </div>
+        <div class="st-footer-social">
+          <ul class="st-footer-social-btn st-flex st-mp0">
+            <li><a href="#"><i class="fab fa-facebook-f"></i></a></li>
+            <li><a href="#"><i class="fab fa-twitter"></i></a></li>
+            <li><a href="#"><i class="fab fa-pinterest-p"></i></a></li>
+            <li><a href="#"><i class="fab fa-linkedin-in"></i></a></li>
+            <li><a href="#"><i class="fab fa-instagram"></i></a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="st-copyright text-center">
+        <div class="st-copyright-text">© SmartCancer, 2024.</div>
+    </div>
+  </footer>
+  <!-- End Footer Seciton -->
+  <!-- Start Video Popup -->
+  <div class="st-video-popup">
+    <div class="st-video-popup-overlay"></div>
+    <div class="st-video-popup-content">
+      <div class="st-video-popup-layer"></div>
+      <div class="st-video-popup-container">
+        <div class="st-video-popup-align">
+          <div class="embed-responsive embed-responsive-16by9">
+            <iframe class="embed-responsive-item" src="about:blank"></iframe>
+          </div>
+        </div>
+        <div class="st-video-popup-close"></div>
+      </div>
+    </div>
+  </div>
+  <!-- End Video Popup -->
+  <!-- Scripts -->
+  <script src="{% static 'js/vendor/modernizr-3.5.0.min.js' %}"></script>
+  <script src="{% static 'js/vendor/jquery-1.12.4.min.js' %}"></script>
+  <script src="{% static 'js/mailchimp.min.js' %}"></script>
+  <script src="{% static 'js/owlCarousel.min.js' %}"></script>
+  <script src="{% static 'js/tamjid-counter.min.js' %}"></script>
+  <script src="{% static 'js/wow.min.js' %}"></script>
+  <script src="{% static 'js/persianumber.min.js' %}"></script>
+  <script src="{% static 'js/main.js' %}"></script>
+
+</body>
+</html>

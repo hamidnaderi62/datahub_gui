@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}dataset-viewer-body{% endblock %}
+
+{% block content %}
+<main class="dataset-viewer-page container-xxl" aria-labelledby="dataset-viewer-title">
+    <header class="dataset-viewer-toolbar">
+        <div class="dataset-viewer-heading">
+            <span class="dataset-viewer-kicker"><i class="ti ti-table-options me-1" aria-hidden="true"></i>{{ ui.viewer_title }}</span>
+            <h1 id="dataset-viewer-title">{{ current_filename|default:ui.viewer_title }}</h1>
+            {% if not error and sample_count and row_count %}
+                <p>{{ ui.viewer_showing }} <strong>{{ sample_count }}</strong> {{ ui.viewer_of }} <strong>{{ row_count }}</strong> {{ ui.viewer_records }}</p>
+            {% endif %}
+        </div>
+        <a class="btn btn-outline-secondary dataset-viewer-back" href="{% url 'dataset:dataset_files' pk=dataset.id %}">
+            <i class="ti ti-arrow-left me-1" aria-hidden="true"></i>{{ ui.viewer_back }}
+        </a>
+    </header>
+
+    {% if error %}
+        <section class="dataset-viewer-error card" role="alert">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    <span class="dataset-viewer-error-icon"><i class="ti ti-alert-triangle" aria-hidden="true"></i></span>
+                    <div>
+                        <h2 class="h5 mb-2">{{ ui.viewer_error_title }}</h2>
+                        <p class="mb-0">{{ error }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    {% else %}
+        <section class="dataset-viewer-panel" aria-label="{{ ui.viewer_title }}">
+            <div class="dataset-viewer-canvas">
+                {{ pygwalker_html|safe }}
+            </div>
+        </section>
+    {% endif %}
+</main>
+{% endblock %}

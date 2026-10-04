@@ -11,26 +11,26 @@ from datetime import datetime
 
 def user_login_fa(request):
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('home:home_fa')
-    return render(request, 'account/login_fa.html', context={})
+            return redirect('home:home')
+    return render(request, 'account/login.html', context={})
 
 
 def user_logout_fa(request):
     logout(request)
-    return redirect('home:home_fa')
+    return redirect('home:home')
 
 
 def user_register_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -39,16 +39,16 @@ def user_register_fa(request):
 
         if password1 != password2:
             context['errors'].append('کلمه های عبور یکسان نمی باشند')
-            return render(request, 'account/register_fa.html', context)
+            return render(request, 'account/register.html', context)
 
         if User.objects.filter(username=username):
             context['errors'].append('نام کاربری تکراری می باشد')
-            return render(request, 'account/register_fa.html', context)
+            return render(request, 'account/register.html', context)
 
         user = User.objects.create(username=username, email=email, password=make_password(password1))
         login(request, user)
-        return redirect('home:home_fa')
-    return render(request, 'account/register_fa.html', context)
+        return redirect('home:home')
+    return render(request, 'account/register.html', context)
 
 
 @login_required
@@ -69,7 +69,7 @@ def profile_account_fa(request):
                 profile = request.user.profile
                 profile.image = image
                 profile.save()
-            return render(request, 'account/profile_account_fa.html', context)
+            return render(request, 'account/profile_account.html', context)
 
         elif 'btn_change_password' in request.POST:
             current_password = request.POST.get('currentPassword')
@@ -79,8 +79,8 @@ def profile_account_fa(request):
                 print(current_password)
                 request.user.set_password(new_password)
                 request.user.save()
-                return render(request, 'account/login_fa.html', context)
-    return render(request, 'account/profile_account_fa.html', context)
+                return render(request, 'account/login.html', context)
+    return render(request, 'account/profile_account.html', context)
 
 
 def profile_dataset_fa(request):
@@ -90,7 +90,7 @@ def profile_dataset_fa(request):
     my_datasets = Dataset.objects.filter(user_id=request.user.id).all().order_by('-id')
     paginator = Paginator(my_datasets, 9)
     my_datasets = paginator.get_page(page_number)
-    return render(request, 'account/profile_dataset_fa.html', context={'my_datasets': my_datasets})
+    return render(request, 'account/profile_dataset.html', context={'my_datasets': my_datasets})
 
 
 def profile_product_fa(request):
@@ -110,7 +110,7 @@ def profile_product_fa(request):
     print(all_datasets)
     my_products = Product.objects.select_related('dataset').filter(dataset__user_id=request.user.id).order_by('-id')
 
-    return render(request, 'account/profile_product_fa.html', context={'my_products': my_products,'all_datasets': all_datasets})
+    return render(request, 'account/profile_product.html', context={'my_products': my_products,'all_datasets': all_datasets})
 
 def profile_marketplace_fa(request):
     if request.method == 'POST':
@@ -123,7 +123,7 @@ def profile_marketplace_fa(request):
         'dataset').select_related('user')
     out_requests = Request.objects.all().select_related('dataset').filter(user_id=request.user.id).select_related(
         'user')
-    return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
+    return render(request, 'account/profile_marketplace.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})
 
 
@@ -132,10 +132,10 @@ from django.core.exceptions import PermissionDenied
 
 
 def custom_permission_denied(request, exception=None):
-    return render(request, 'account/403_fa.html', status=403)
+    return render(request, 'account/403.html', status=403)
 
 
 def custom_page_not_found(request, exception=None):
-    return render(request, 'account/404_fa.html', status=404)
+    return render(request, 'account/404.html', status=404)
 
 

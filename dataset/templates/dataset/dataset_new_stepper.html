@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load my_filters %}
+
+
+{% block content %}
+
+
+<div class="container-xxl flex-grow-1 container-p-y">
+    <h4 class="py-3 mb-4"></h4>
+    <div class="app-academy">
+
+         <!-- Custom Icon Radios -->
+        <div class="col-xl-12">
+            <div class="card">
+                <h5 class="card-header">{{ ui.workflow_new_title }}</h5>
+                <div class="card-body">
+                    <form id="datasetForm" method="post" action="{% url 'dataset:dataset_define_stepper' %}">
+                        {% csrf_token %}
+                        <div class="row">
+                            <!-- Define Dataset Option -->
+                            <div class="col-md mb-md-0 mb-2">
+                                <div class="form-check custom-option custom-option-icon">
+                                    <label class="form-check-label custom-option-content" for="customRadioIcon1">
+                                        <span class="custom-option-body">
+                                            <i class="ti ti-database-plus"></i>
+                                            <span class="custom-option-title">{{ ui.workflow_basic_title }}</span>
+                                            <small>{{ ui.workflow_basic_help }}</small>
+                                        </span>
+                                        <input class="form-check-input" id="customRadioIcon1" name="dataset_option"
+                                               type="radio" value="define" checked/>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Upload Dataset Option -->
+                            <div class="col-md mb-md-0 mb-2">
+                                <div class="form-check custom-option custom-option-icon">
+                                    <label class="form-check-label custom-option-content" for="customRadioIcon2">
+                                        <span class="custom-option-body">
+                                            <i class="ti ti-database-import"></i>
+                                            <span class="custom-option-title">{{ ui.workflow_advanced_title }}</span>
+                                            <small>{{ ui.workflow_advanced_help }}</small>
+                                        </span>
+                                        <input class="form-check-input" id="customRadioIcon2" name="dataset_option"
+                                               type="radio" value="upload"/>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary waves-effect waves-light">
+                                <span class="me-2">{{ ui.workflow_start }}</span>
+                                <i class="ti ti-arrow-right scaleX-n1-rtl"></i>
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+        <!-- /Custom Icon Radios -->
+
+
+    </div>
+
+</div>
+
+
+
+<script>
+   document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('datasetForm');
+    const options = document.querySelectorAll('input[name="dataset_option"]');
+    options.forEach(option => {
+        option.addEventListener('change', function() {
+            if (this.value === 'define') {
+                form.action = "{% url 'dataset:dataset_define_stepper' %}";
+            } else {
+                form.action = "{% url 'dataset:dataset_load_stepper' %}";
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

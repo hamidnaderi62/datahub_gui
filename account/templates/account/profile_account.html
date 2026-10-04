@@ -1,0 +1,134 @@
+{% extends 'base_profile.html' %}
+{% load static %}
+
+
+{% block content %}
+
+
+
+        <!-- Change Profile -->
+        <form method="post" enctype="multipart/form-data" >
+            {% csrf_token %}
+            <div class="card mb-4">
+            <h5 class="card-header">جزئیات پروفایل</h5>
+            <!-- Account -->
+            <div class="card-body">
+                <div class="d-flex align-items-start align-items-sm-center gap-4">
+                    {% if request.user.profile.image %}
+                        <img alt="تصویر کاربر" class="d-block w-px-100 h-px-100 rounded" id="uploadedAvatar" src="{{ user.profile.image.url }}"/>
+                    {% else %}
+                        <img alt="تصویر کاربر" class="d-block h-auto ms-0 ms-sm-4 rounded user-profile-img" src="{% static 'img/avatars/avatar_default.png' %}"/>
+                    {% endif %}
+
+                    <div class="button-wrapper">
+                        <label class="btn btn-primary me-2 mb-3" for="upload" tabindex="0">
+                            <span class="d-none d-sm-block">آپلود عکس جدید</span>
+                            <i class="ti ti-upload d-block d-sm-none"></i>
+                            <input accept="image/png, image/jpeg" class="account-file-input" hidden id="upload" name="image" type="file"/>
+                        </label>
+                        <button class="btn btn-label-secondary account-image-reset mb-3" type="button">
+                            <i class="ti ti-refresh-dot d-block d-sm-none"></i>
+                            <span class="d-none d-sm-block">حذف عکس</span>
+                        </button>
+                        <div class="text-muted">حداکثر 5 مگابایت و با فرمت png , jpeg , jpg</div>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-0"/>
+            <div class="card-body">
+                    <div class="row">
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label" for="name">نام/ عنوان </label>
+                            <input autofocus class="form-control" id="name" name="name" type="text" value="{{ user.profile.name }}"/>
+                        </div>
+                        <div class="mb-3 col-md-6">
+                            <label class="form-label" for="phone"> تلفن</label>
+                            <div class="input-group input-group-merge">
+                                <input class="form-control ltr" id="phone" name="phone"  type="text" value="{{ user.profile.phone }}"/>
+                                <span class="input-group-text">IR (+98)</span>
+                            </div>
+                        </div>
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label" for="site">وبسایت</label>
+                            <input class="form-control" id="site" name="site"  type="text" value="{{ user.profile.site }}"/>
+                        </div>
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label" for="address">آدرس</label>
+                            <input class="form-control" id="address" name="address" type="text" value="{{ user.profile.address }}"/>
+                        </div>
+                        <div class="mb-3 col-md-12">
+                            <label class="form-label" for="bio">بیو</label>
+                            <input class="form-control" id="bio" name="bio" type="text" value="{{ user.profile.bio }}"/>
+                        </div>
+
+
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary me-2" name="btn_change_profile" type="submit">ذخیره تغییرات</button>
+                        <button class="btn btn-label-secondary" type="reset">لغو</button>
+                    </div>
+                </form>
+            </div>
+            <!-- /Account -->
+        </div>
+         <!--/ Change Profile -->
+
+        <!-- Change Password -->
+        <div class="card mb-4">
+            <h5 class="card-header">تغییر رمز عبور</h5>
+            <div class="card-body">
+                <form method="post" >
+                    {% csrf_token %}
+                    <div class="row">
+                        <div class="mb-3 col-md-6 form-password-toggle">
+                            <label class="form-label" for="currentPassword">رمز عبور فعلی</label>
+                            <div class="input-group input-group-merge">
+                                <input class="form-control" required id="currentPassword" name="currentPassword" placeholder="············" type="password"/>
+                                <span class="input-group-text cursor-pointer">
+                                    <i class="ti ti-eye-off"></i>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="mb-3 col-md-6 form-password-toggle">
+                            <label class="form-label" for="newPassword">رمز عبور جدید</label>
+                            <div class="input-group input-group-merge">
+                                <input class="form-control" minlength="8" required id="newPassword" name="newPassword" placeholder="············" type="password"/>
+                                <span class="input-group-text cursor-pointer">
+                                    <i class="ti ti-eye-off"></i>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="mb-3 col-md-6 form-password-toggle">
+                            <label class="form-label" for="confirmPassword">تأیید رمز عبور جدید</label>
+                            <div class="input-group input-group-merge">
+                                <input class="form-control" minlength="8" required id="confirmPassword" name="confirmPassword" placeholder="············" type="password"/>
+                                <span class="input-group-text cursor-pointer">
+                                    <i class="ti ti-eye-off"></i>
+                                </span>
+                            </div>
+                        </div>
+
+                        {% if errors %}
+                            <div class="card-body">
+                            {%  for error in errors %}
+                                <div class="alert alert-danger alert-dismissible" role="alert">{{ error }}
+                                    <button aria-label="بستن" class="btn-close" data-bs-dismiss="alert" type="button"></button>
+                                </div>
+                            {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <div>
+                            <button class="btn btn-primary me-2" name="btn_change_password"  type="submit">بروزرسانی رمز</button>
+                            <button class="btn btn-label-secondary" type="reset">لغو</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <!--/ Change Password -->
+
+
+{% endblock %}

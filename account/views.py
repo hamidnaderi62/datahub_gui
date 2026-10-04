@@ -1,12 +1,13 @@
 from django.contrib.auth.models import User
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.hashers import make_password, check_password
 from django.contrib.auth.decorators import login_required
 from .models import User, Profile
 from dataset.models import Dataset, Product, Comment, Request
 from django.core.paginator import Paginator
-from datetime import datetime
+from datetime import datetime, timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -15,6 +16,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.template.loader import render_to_string
+from smtplib import SMTPException
 
 
 User = get_user_model()
@@ -23,7 +25,7 @@ User = get_user_model()
 def user_register_fa1(request):
     context = {'errors': []}
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
 
     if request.method == 'POST':
         username = request.POST.get('username')
@@ -33,15 +35,15 @@ def user_register_fa1(request):
 
         if password1 != password2:
             context['errors'].append('کلمه های عبور یکسان نمی باشند')
-            return render(request, 'account/register_fa.html', context)
+            return render(request, 'account/register.html', context)
 
         if User.objects.filter(username=username).exists():
             context['errors'].append('نام کاربری تکراری می باشد')
-            return render(request, 'account/register_fa.html', context)
+            return render(request, 'account/register.html', context)
 
         if User.objects.filter(email=email).exists():
             context['errors'].append('این ایمیل قبلا ثبت شده است')
-            return render(request, 'account/register_fa.html', context)
+            return render(request, 'account/register.html', context)
 
         # Create user but set is_active=False until email is verified
         user = User.objects.create_user(
@@ -62,7 +64,7 @@ def user_register_fa1(request):
 
         # Send verification email
         subject = 'تایید ایمیل'
-        message = render_to_string('account/verify_email_fa.html', {
+        message = render_to_string('account/verify_email.html', {
             'user': user,
             'verification_url': verification_url,
         })
@@ -77,9 +79,9 @@ def user_register_fa1(request):
         )
 
         # Redirect to a page explaining that verification email has been sent
-        return redirect('account:verification_sent_fa')
+        return redirect('account:login')
 
-    return render(request, 'account/register_fa.html', context)
+    return render(request, 'account/register.html', context)
 
 
 def verify_email_fa(request, uidb64, token):
@@ -93,15 +95,14 @@ def verify_email_fa(request, uidb64, token):
         user.is_active = True
         user.save()
         login(request, user)
-        return redirect('account:verification_success_fa')
-    else:
-        return redirect('account:verification_failed_fa')
+        return redirect('home:home')
+    return redirect('account:login')
 
 
 def user_login_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
 
     if request.method == "POST":
         username = request.POST.get("username")
@@ -111,13 +112,13 @@ def user_login_fa(request):
         if user is not None:
             if user.is_active:
                 login(request, user)
-                return redirect('home:home_fa')
+                return redirect('home:home')
             else:
                 context['errors'].append('حساب کاربری شما فعال نیست. لطفا ایمیل خود را تایید کنید.')
         else:
             context['errors'].append('نام کاربری یا کلمه عبور اشتباه است')
 
-    return render(request, 'account/login_fa.html', context)
+    return render(request, 'account/login.html', context)
 
 
 
@@ -128,43 +129,75 @@ def user_login_fa(request):
 def user_register_fa(request):
     context = {'errors': []}
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
+
     if request.method == 'POST':
-        username = request.POST.get('username')
-        email = request.POST.get('email')
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
 
         if password1 != password2:
             context['errors'].append('کلمه های عبور یکسان نمی باشند')
-            return render(request, 'account/register_fa.html', context)
-
-        if User.objects.filter(username=username):
+        elif not username or not email:
+            context['errors'].append('نام کاربری و ایمیل الزامی است')
+        elif User.objects.filter(username=username).exists():
             context['errors'].append('نام کاربری تکراری می باشد')
-            return render(request, 'account/register_fa.html', context)
+        elif User.objects.filter(email=email).exists():
+            context['errors'].append('این ایمیل قبلا ثبت شده است')
+        else:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password1,
+                is_active=False,
+            )
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            token = default_token_generator.make_token(user)
+            verification_url = request.build_absolute_uri(
+                reverse('account:verify_email', args=[uid, token])
+            )
+            message = render_to_string('account/verify_email.html', {
+                'user': user,
+                'verification_url': verification_url,
+            })
+            try:
+                send_mail(
+                    'تایید ایمیل',
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=False,
+                    html_message=message,
+                )
+            except (OSError, SMTPException):
+                # Do not leave an unusable inactive account after a mail outage.
+                user.delete()
+                context['errors'].append(
+                    'ارسال ایمیل تایید انجام نشد. لطفا تنظیمات ایمیل را بررسی کنید.'
+                )
+                return render(request, 'account/register.html', context)
+            return redirect('account:login')
 
-        user = User.objects.create(username=username, email=email, password=make_password(password1))
-        login(request, user)
-        return redirect('home:home_fa')
-    return render(request, 'account/register_fa.html', context)
+    return render(request, 'account/register.html', context)
 
 
 def user_login_fa1(request):
     if request.user.is_authenticated:
-        return redirect('home:home_fa')
+        return redirect('home:home')
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
         user = authenticate(request, username=username, password=password)
         if user is not None:
             login(request, user)
-            return redirect('home:home_fa')
-    return render(request, 'account/login_fa.html', context={})
+            return redirect('home:home')
+    return render(request, 'account/login.html', context={})
 
 
 def user_logout_fa(request):
     logout(request)
-    return redirect('home:home_fa')
+    return redirect('home:home')
 
 @login_required
 def profile_account_fa(request):
@@ -194,7 +227,7 @@ def profile_account_fa(request):
                 profile = request.user.profile
                 profile.image = image
                 profile.save()
-            return render(request, 'account/profile_account_fa.html', context)
+            return render(request, 'account/profile_account.html', context)
 
         elif 'btn_change_password' in request.POST:
             current_password = request.POST.get('currentPassword')
@@ -203,14 +236,15 @@ def profile_account_fa(request):
             if check_password(current_password, request.user.password):
                 if new_password != confirm_password:
                     context['errors'].append('کلمه های عبور یکسان نمی باشند')
-                    return render(request, 'account/profile_account_fa.html', context)
+                    return render(request, 'account/profile_account.html', context)
                 request.user.set_password(new_password)
                 request.user.save()
                 logout(request)
-                return redirect('account:login_fa')
-    return render(request, 'account/profile_account_fa.html', context)
+                return redirect('account:login')
+    return render(request, 'account/profile_account.html', context)
 
 
+@login_required
 def profile_dataset_fa(request):
     page_number = 1
     if request.method == 'GET':
@@ -218,9 +252,10 @@ def profile_dataset_fa(request):
     my_datasets = Dataset.objects.filter(user_id=request.user.id).all().order_by('-id')
     paginator = Paginator(my_datasets, 9)
     my_datasets = paginator.get_page(page_number)
-    return render(request, 'account/profile_dataset_fa.html', context={'my_datasets': my_datasets})
+    return render(request, 'account/profile_dataset.html', context={'my_datasets': my_datasets})
 
 
+@login_required
 def profile_product_fa(request):
     if request.method == 'POST':
         dataset_id = request.POST.get('product_dataset')
@@ -231,22 +266,34 @@ def profile_product_fa(request):
         product_image = request.FILES.get('product_image')
         product_desc = request.POST.get('product_desc')
 
-        dataset = Dataset.objects.get(id=dataset_id)
+        dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user)
         Product.objects.create(dataset=dataset, title=product_title, type=product_type, link=product_link, desc=product_desc, image=product_image, productDate=product_productDate)
 
-    all_datasets = Dataset.objects.all().values('id', 'name').order_by('name')
+    all_datasets = Dataset.objects.filter(user=request.user).values('id', 'name').order_by('name')
     print(all_datasets)
     my_products = Product.objects.select_related('dataset').filter(dataset__user_id=request.user.id).order_by('-id')
 
-    return render(request, 'account/profile_product_fa.html', context={'my_products': my_products,'all_datasets': all_datasets})
+    return render(request, 'account/profile_product.html', context={'my_products': my_products,'all_datasets': all_datasets})
 
 
+@login_required
 def profile_marketplace_fa(request):
     if request.method == 'POST':
+        access_request = get_object_or_404(
+            Request.objects.filter(
+                dataset__user=request.user,
+                responseType='Request',
+            ),
+            id=request.POST.get('request_id'),
+        )
         if 'btn_in_request_accept' in request.POST:
-            Request.objects.filter(id=request.POST.get('request_id')).update(responseType='Accept', responseDate=datetime.now())
+            access_request.responseType = 'Accept'
+            access_request.responseDate = timezone.now()
+            access_request.save(update_fields=['responseType', 'responseDate'])
         elif 'btn_in_request_reject' in request.POST:
-            Request.objects.filter(id=request.POST.get('request_id')).update(responseType='Reject', responseDate=datetime.now())
+            access_request.responseType = 'Reject'
+            access_request.responseDate = timezone.now()
+            access_request.save(update_fields=['responseType', 'responseDate'])
 
     user_datasets = Dataset.objects.filter(user_id=request.user.id)
     in_requests = Request.objects.filter(
@@ -259,15 +306,15 @@ def profile_marketplace_fa(request):
     # out_requests = Request.objects.all().select_related('dataset').filter(user_id=request.user.id).select_related('user')
     out_requests = Request.objects.filter(user_id=request.user.id).select_related('dataset').select_related(
         'user')
-    return render(request, 'account/profile_marketplace_fa.html', context={'in_requests': in_requests
+    return render(request, 'account/profile_marketplace.html', context={'in_requests': in_requests
         , 'out_requests': out_requests})
 
 
 def custom_permission_denied(request, exception=None):
-    return render(request, 'account/403_fa.html', status=403)
+    return render(request, 'account/403.html', status=403)
 
 
 def custom_page_not_found(request, exception=None):
-    return render(request, 'account/404_fa.html', status=404)
+    return render(request, 'account/404.html', status=404)
 
 

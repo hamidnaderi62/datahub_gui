@@ -1,0 +1,117 @@
+{% extends 'base_raw.html' %}
+{% load static %}
+
+{% block page_css %}
+<link href="{% static 'vendor/libs/bs-stepper/bs-stepper.css' %}" rel="stylesheet">
+<link href="{% static 'vendor/libs/bootstrap-select/bootstrap-select.css' %}" rel="stylesheet">
+<link href="{% static 'vendor/libs/tagify/tagify.css' %}" rel="stylesheet">
+<style>
+.workflow-shell{max-width:1180px;margin:auto}.workflow-hero{background:linear-gradient(135deg,#696cff,#8592ff);color:#fff;border-radius:1rem;padding:1.6rem 1.8rem;margin-bottom:1.25rem;box-shadow:0 1rem 2rem rgba(105,108,255,.18)}.workflow-hero h1{font-size:1.5rem;margin:0 0 .35rem}.workflow-hero p{margin:0;opacity:.9}.wizard-numbered{border:0;box-shadow:0 .25rem 1rem rgba(67,89,113,.08)}.bs-stepper-header{overflow:auto;padding:1rem 1.25rem}.bs-stepper-label{white-space:nowrap}.workflow-card{border:1px solid rgba(67,89,113,.14);border-radius:.85rem;padding:1.25rem;background:#fff}.workflow-help{color:#697a8d;font-size:.9rem;margin-bottom:1.25rem}.workflow-dropzone{border:1.5px dashed #cfd3ec;border-radius:.85rem;padding:1.45rem;background:#f8f8ff}.workflow-dropzone .form-control{max-width:560px;margin:auto}.source-preview,.privacy-summary{border:1px solid #ebeef2;border-radius:.75rem;background:#fff}.source-preview{max-height:390px;overflow:auto}.source-preview table{min-width:680px}.source-preview td,.source-preview th{white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}.policy-list{max-height:540px;overflow:auto}.policy-list .repeater-wrapper{background:#fff}.privacy-summary{padding:1rem}.upload-panel{background:#f8f9fa;border-radius:.75rem;padding:1.2rem}.access-note{background:#f8f9fa;border-radius:.7rem;padding:1rem}.progress{height:.7rem}.progress-bar{transition:width .4s ease}.step-actions{display:flex;justify-content:space-between;gap:.75rem;margin-top:1.25rem}.step-actions .btn{min-width:8rem}.form-label{font-weight:600}.workflow-note{font-size:.8rem;color:#697a8d}.privacy-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .65rem;border-radius:999px;background:#f1f2ff;color:#696cff;font-size:.78rem}@media(max-width:767.98px){.workflow-hero{padding:1.2rem}.workflow-card{padding:1rem}.step-actions{flex-wrap:wrap}.step-actions .btn{flex:1}.bs-stepper-header{padding-inline:.75rem}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="layout-wrapper layout-navbar-full layout-without-menu"><div class="layout-container"><div class="layout-page"><div class="content-wrapper">
+<main class="container-xxl py-4 workflow-shell">
+    <section class="workflow-hero">
+        <h1>{{ ui.workflow_advanced_title|default:ui.workflow_new_title }}</h1>
+        <p>{{ ui.workflow_advanced_help|default:ui.workflow_basic_help }}</p>
+    </section>
+    <div id="workflow-action-message" class="alert d-none" role="status" aria-live="polite"></div>
+
+    <div class="bs-stepper wizard-numbered" id="dataset-workflow">
+        <div class="bs-stepper-header" role="tablist">
+            <div class="step" data-target="#step1"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">1</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_define }}</span></span></button></div>
+            <div class="line"><i class="ti ti-chevron-right"></i></div>
+            <div class="step" data-target="#step2"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">2</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_upload_file }}</span></span></button></div>
+            <div class="line"><i class="ti ti-chevron-right"></i></div>
+            <div class="step" data-target="#step3"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">3</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_choose_anonymization }}</span></span></button></div>
+            <div class="line"><i class="ti ti-chevron-right"></i></div>
+            <div class="step" data-target="#step4"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">4</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_anonymize }}</span></span></button></div>
+            <div class="line"><i class="ti ti-chevron-right"></i></div>
+            <div class="step" data-target="#step5"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">5</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_preview }}</span></span></button></div>
+            <div class="line"><i class="ti ti-chevron-right"></i></div>
+            <div class="step" data-target="#step6"><button class="step-trigger" type="button" role="tab"><span class="bs-stepper-circle">6</span><span class="bs-stepper-label"><span class="bs-stepper-title">{{ ui.workflow_confirmation }}</span></span></button></div>
+        </div>
+
+        <div class="bs-stepper-content">
+            <div class="content" id="step1" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_define }}</h5><p class="workflow-help">{{ ui.workflow_basics_help }}</p>
+                    <div class="row g-3">
+                        <div class="col-md-6"><label class="form-label" for="dataset_name">{{ ui.workflow_name }}</label><input class="form-control" id="dataset_name" required></div>
+                        <div class="col-md-6"><label class="form-label" for="dataset_owner">{{ ui.workflow_owner }}</label><input class="form-control" id="dataset_owner" value="{{ request.user.username|default:'' }}"></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_language">{{ ui.workflow_language }}</label><select class="selectpicker w-100" id="dataset_language" multiple><option value="en" selected>{{ ui.workflow_lang_en }}</option><option value="fa">{{ ui.workflow_lang_fa }}</option><option value="ar">{{ ui.workflow_lang_ar }}</option></select></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_license">{{ ui.workflow_license }}</label><select class="form-select" id="dataset_license"><option value="MIT">MIT</option><option value="Apache-2.0">Apache-2.0</option><option value="Other">Other</option></select></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_format">{{ ui.workflow_format }}</label><select class="form-select" id="dataset_format"><option value="Text">{{ ui.workflow_format_text }}</option><option value="Image">{{ ui.workflow_format_image }}</option><option value="Sound">{{ ui.workflow_format_sound }}</option></select></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_recordsNum">{{ ui.workflow_records }}</label><input class="form-control" id="dataset_recordsNum" type="number" min="0" value="0"></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_price">{{ ui.workflow_price }}</label><input class="form-control" id="dataset_price" type="number" min="0" step="0.01" value="0"></div>
+                        <div class="col-md-4"><label class="form-label" for="dataset_requestRequired">{{ ui.workflow_approval }}</label><select class="form-select" id="dataset_requestRequired"><option value="No">{{ ui.workflow_no }}</option><option value="Yes">{{ ui.workflow_yes }}</option></select></div>
+                        <div class="col-12"><label class="form-label" for="dataset_desc">{{ ui.workflow_description }}</label><textarea class="form-control" id="dataset_desc" rows="3"></textarea></div>
+                        <div class="col-12"><label class="form-label d-block" for="dataset_tags">{{ ui.workflow_tags }}</label><div class="d-flex align-items-start gap-2"><input class="tagify-email-list flex-grow-1" id="dataset_tags"><button class="btn btn-sm btn-icon btn-outline-primary" id="add-dataset-tag" type="button" title="{{ ui.workflow_add_tag }}" aria-label="{{ ui.workflow_add_tag }}"><i class="ti ti-plus"></i></button></div><small class="workflow-note d-block mt-2">{{ ui.workflow_tags_help }}</small></div>
+                    </div>
+                </div>
+                <div class="step-actions justify-content-end"><button class="btn btn-primary btn-next" type="button">{{ ui.workflow_next }} <i class="ti ti-arrow-right ms-1"></i></button></div>
+            </div>
+
+            <div class="content" id="step2" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_upload_file }}</h5><p class="workflow-help">{{ ui.workflow_load_file_help }}</p>
+                    <div class="workflow-dropzone text-center"><i class="ti ti-file-spreadsheet display-5 text-primary"></i><h6 class="mt-2 mb-1">{{ ui.workflow_file }}</h6><p class="workflow-note mb-3">{{ ui.workflow_file_formats }}</p><input accept=".csv,.tsv,.xlsx,.xls,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" class="form-control" id="my_file1" type="file"><small class="workflow-note d-block mt-2" id="source-profile">{{ ui.workflow_choose_file }}</small></div>
+                    <div class="d-flex align-items-center justify-content-between mt-4 mb-2"><strong>{{ ui.workflow_preview }}</strong><span class="privacy-badge"><i class="ti ti-shield-check"></i> {{ ui.workflow_local_profile }}</span></div>
+                    <div class="source-preview p-2" id="tb_container"><div class="text-center text-muted py-5">{{ ui.workflow_choose_file }}</div></div>
+                </div>
+                <div class="step-actions"><button class="btn btn-label-secondary btn-prev" type="button"><i class="ti ti-arrow-left me-1"></i>{{ ui.workflow_previous }}</button><button class="btn btn-primary btn-next" type="button">{{ ui.workflow_next }} <i class="ti ti-arrow-right ms-1"></i></button></div>
+            </div>
+
+            <div class="content" id="step3" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_choose_anonymization }}</h5><p class="workflow-help">{{ ui.workflow_policy_help }}</p>
+                    <div class="privacy-summary mb-3"><div class="d-flex align-items-start gap-2"><i class="ti ti-shield-lock text-primary fs-4"></i><div><strong>{{ ui.workflow_anonymization }}</strong><p class="workflow-note mb-0">{{ ui.workflow_privacy_policy_help }}</p></div></div></div>
+                    <div id="div_container" class="policy-list" data-repeater-list="group-a"><div class="text-center text-muted py-5">{{ ui.workflow_choose_file }}</div></div>
+                    <button class="btn btn-outline-primary mt-3" type="button" onclick="generateColMetaData()"><i class="ti ti-refresh me-1"></i>{{ ui.workflow_save_changes }}</button>
+                </div>
+                <div class="step-actions"><button class="btn btn-label-secondary btn-prev" type="button"><i class="ti ti-arrow-left me-1"></i>{{ ui.workflow_previous }}</button><button class="btn btn-primary btn-next" type="button">{{ ui.workflow_next }} <i class="ti ti-arrow-right ms-1"></i></button></div>
+            </div>
+
+            <div class="content" id="step4" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_anonymize }}</h5><p class="workflow-help">{{ ui.workflow_anonymize_help }}</p>
+                    <div class="table-responsive"><table id="tb_metadata" class="table table-hover align-middle"><thead><tr><th>{{ ui.workflow_column_name }}</th><th>{{ ui.workflow_data_type }}</th><th>{{ ui.workflow_anonymization_method }}</th><th>{{ ui.workflow_confidence }}</th></tr></thead><tbody></tbody></table></div>
+                    <button class="btn btn-success mt-3" type="button" onclick="de_identification_dataset()"><i class="ti ti-shield-check me-1"></i>{{ ui.workflow_anonymize_action }}</button>
+                </div>
+                <div class="step-actions"><button class="btn btn-label-secondary btn-prev" type="button"><i class="ti ti-arrow-left me-1"></i>{{ ui.workflow_previous }}</button><button class="btn btn-primary btn-next" type="button">{{ ui.workflow_next }} <i class="ti ti-arrow-right ms-1"></i></button></div>
+            </div>
+
+            <div class="content" id="step5" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_preview }}</h5><p class="workflow-help">{{ ui.workflow_preview_help }}</p>
+                    <div id="anonymized-summary" class="alert alert-info"><i class="ti ti-info-circle me-1"></i>{{ ui.workflow_inspection_pending }}</div>
+                    <div class="source-preview p-2" id="tb_anonymized_container"><div class="text-center text-muted py-5">{{ ui.workflow_deidentification_required }}</div></div>
+                </div>
+                <div class="step-actions"><button class="btn btn-label-secondary btn-prev" type="button"><i class="ti ti-arrow-left me-1"></i>{{ ui.workflow_previous }}</button><button class="btn btn-primary btn-next" type="button">{{ ui.workflow_next }} <i class="ti ti-arrow-right ms-1"></i></button></div>
+            </div>
+
+            <div class="content" id="step6" role="tabpanel">
+                <div class="workflow-card">
+                    <h5 class="mb-1">{{ ui.workflow_confirmation }}</h5><p class="workflow-help">{{ ui.workflow_confirmation_help }}</p>
+                    <div class="row g-3"><div class="col-md-6"><label class="form-label" for="final-records">{{ ui.workflow_records }}</label><input class="form-control" id="final-records" type="text" value="{{ ui.workflow_calculated_from_file }}" readonly></div><div class="col-md-6"><label class="form-label" for="final-output">{{ ui.workflow_format }}</label><input class="form-control" id="final-output" type="text" value="{{ ui.workflow_sanitized_csv }}" readonly></div></div>
+                    <div class="access-note mt-4"><div class="form-check"><input class="form-check-input" id="question_verify" type="checkbox"><label class="form-check-label" for="question_verify">{{ ui.workflow_consent_agree }}</label></div><small class="workflow-note d-block mt-2">{{ ui.workflow_consent_body }}</small></div>
+                    <div class="upload-panel mt-4"><div class="d-flex justify-content-between align-items-center mb-2"><strong>{{ ui.workflow_uploading }}</strong><span id="upload-status" class="workflow-note">{{ ui.workflow_waiting }}</span></div><div class="progress mb-2"><div id="upload-progress" class="progress-bar" role="progressbar" style="width:0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div></div><div id="upload-progress-text" class="workflow-note">{{ ui.workflow_waiting }}</div></div>
+                </div>
+                <div class="step-actions"><button class="btn btn-label-secondary btn-prev" type="button"><i class="ti ti-arrow-left me-1"></i>{{ ui.workflow_previous }}</button><button class="btn btn-primary" id="btn_upload_dataset" type="button"><i class="ti ti-cloud-upload me-1"></i>{{ ui.workflow_send }}</button></div>
+            </div>
+        </div>
+    </div>
+</main><div class="content-backdrop fade"></div></div></div></div></div>
+{% endblock %}
+
+{% block page_js %}
+<script src="{% static 'vendor/libs/popper/popper.js' %}"></script><script src="{% static 'vendor/js/bootstrap.js' %}"></script><script src="{% static 'vendor/libs/node-waves/node-waves.js' %}"></script><script src="{% static 'vendor/libs/perfect-scrollbar/perfect-scrollbar.js' %}"></script><script src="{% static 'vendor/js/menu.js' %}"></script><script src="{% static 'vendor/libs/bs-stepper/bs-stepper.js' %}"></script><script src="{% static 'datahub_js/workflow_stepper.js' %}"></script><script src="{% static 'vendor/libs/bootstrap-select/bootstrap-select.js' %}"></script><script src="{% static 'vendor/libs/tagify/tagify.js' %}"></script><script src="{% static 'papa/papaparse.js' %}"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="{% static 'datahub_js/compromise.js' %}"></script><script src="{% static 'js/main.js' %}"></script>
+<script>
+window.DataHubWorkflow={
+  uploadUrl:"{% url 'dataset:upload_dataset' %}",directUploadEnabled:{{ direct_s3_uploads|yesno:"true,false" }},directUploadFallback:{{ direct_s3_upload_fallback|yesno:"true,false" }},directCreateUrl:"{% url 'dataset:create_direct_upload' %}",directPartUrl:"{% url 'dataset:direct_upload_part_url' %}",directCompleteUrl:"{% url 'dataset:complete_direct_upload' %}",directAbortUrl:"{% url 'dataset:abort_direct_upload' %}",createBatchUrl:"{% url 'dataset:create_upload_batch' %}",updateBatchUrl:"{% url 'dataset:update_upload_batch' %}",datasetDetailUrl:"{% url 'dataset:dataset_detail' 0 %}".replace('/0','/__DATASET_ID__'),tagsUrl:"{% url 'dataset:predefined_tags' %}",csrfToken:"{{ csrf_token }}",language:"{{ current_language|default:'fa' }}",
+  messages:{verify:"{{ ui.workflow_verify|escapejs }}",chooseFile:"{{ ui.workflow_choose_file|escapejs }}",uploadFailed:"{{ ui.workflow_upload_failed|escapejs }}",uploadComplete:"{{ ui.workflow_upload_complete|escapejs }}",uploading:"{{ ui.workflow_uploading|escapejs }}",starting:"{{ ui.workflow_upload_starting|escapejs }}",columnName:"{{ ui.workflow_column_name|escapejs }}",description:"{{ ui.workflow_description|escapejs }}",text:"{{ ui.workflow_format_text|escapejs }}",number:"{{ ui.workflow_number|escapejs }}",none:"{{ ui.workflow_none|escapejs }}",ner:"{{ ui.workflow_ner|escapejs }}",round:"{{ ui.workflow_round|escapejs }}",bin:"{{ ui.workflow_bin|escapejs }}",year:"{{ ui.workflow_year|escapejs }}",mask:"{{ ui.workflow_mask|escapejs }}",privacyWarning:"{{ ui.workflow_privacy_warning|escapejs }}",transformSummary:"{{ ui.workflow_transform_summary|escapejs }}",residualPii:"{{ ui.workflow_residual_pii|escapejs }}",noResidualPii:"{{ ui.workflow_no_residual_pii|escapejs }}",fileTooLarge:"{{ ui.workflow_file_too_large|escapejs }}",excelUnavailable:"{{ ui.workflow_excel_unavailable|escapejs }}",profileFailed:"{{ ui.workflow_profile_failed|escapejs }}",deidentificationRequired:"{{ ui.workflow_deidentification_required|escapejs }}",anonymization:"{{ ui.workflow_anonymization|escapejs }}",confidence:"{{ ui.workflow_confidence|escapejs }}",dataType:"{{ ui.workflow_data_type|escapejs }}",changesSaved:"{{ ui.workflow_changes_saved|escapejs }}",deidentificationComplete:"{{ ui.workflow_deidentification_complete|escapejs }}",noRows:"{{ ui.workflow_no_rows|escapejs }}"}
+};
+</script><script src="{% static 'datahub_js/dataset_load_stepper.js' %}"></script>
+{% endblock %}

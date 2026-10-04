@@ -5,6 +5,7 @@ from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.files.storage import default_storage
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 import pandas as pd
 from fastparquet import ParquetFile
 import pygwalker as pyg
@@ -29,7 +30,6 @@ import requests
 import hashlib
 from datetime import datetime
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.db import transaction
@@ -56,7 +56,7 @@ def dataset_list_fa(request):
         datasets = paginator.get_page(1)  # Fallback to first page
     except EmptyPage:
         datasets = paginator.get_page(paginator.num_pages)  # Last page
-    return render(request, 'dataset/dataset_list_fa.html', {'datasets': datasets})
+    return render(request, 'dataset/dataset_list.html', {'datasets': datasets})
 
 ###################################################
 # Dataset Card
@@ -92,19 +92,19 @@ def dataset_detail_fa(request, pk=None):
             try:
                 df = pd.read_csv(dataset.file.path)  # Dynamic file path
                 html_obj = pyg.walk(df[:10], return_html=True)
-                return render(request, 'dataset/dataset_detail_fa.html',
+                return render(request, 'dataset/dataset_detail.html',
                               {'dataset': dataset, 'similar_datasets': similar_datasets, 'html_obj': html_obj})
             except FileNotFoundError:
                 raise PermissionDenied("Dataset file not found.")
 
-    return render(request, 'dataset/dataset_detail_fa.html',
+    return render(request, 'dataset/dataset_detail.html',
                   {'dataset': dataset, 'similar_datasets': similar_datasets})
 
 @login_required
 def dataset_download_fa(request, pk=None):
     dataset = get_object_or_404(Dataset, id=pk)
     # download_links = dataset.downloadLink
-    return render(request, 'dataset/dataset_download_fa.html', context={'dataset': dataset})
+    return render(request, 'dataset/dataset_download.html', context={'dataset': dataset})
 
 
 @login_required
@@ -131,15 +131,15 @@ def predefined_tags(request):
 
 
 def dataset_new_stepper_fa(request):
-    return render(request, 'dataset/dataset_new_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_new_stepper.html', context={})
 
 
 def dataset_define_stepper_fa(request):
-    return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_define_stepper.html', context={})
 
 
 def dataset_load_stepper_fa(request):
-    return render(request, 'dataset/dataset_load_stepper_fa.html', context={})
+    return render(request, 'dataset/dataset_load_stepper.html', context={})
 
 
 def saveTempMetaData(request):
@@ -179,7 +179,7 @@ def saveTempMetaData(request):
             input_tags = dataset_tags.split(",")
             print(input_tags)
             new_dataset.tags.set(input_tags)
-        return render(request, 'dataset/dataset_define_stepper_fa.html', context={})
+        return render(request, 'dataset/dataset_define_stepper.html', context={})
 
 
 ###################################################
@@ -240,7 +240,7 @@ def create_user_container(user):
     headers = {'X-Auth-Token': AUTH_TOKEN}
 
     try:
-        response = requests.put(url, headers=headers, verify=False)  # Disable SSL verify for demo
+        response = requests.put(url, headers=headers, verify=True)  # Enforce TLS certificate validation
         if response.status_code not in [201, 202]:
             return False, f"Container creation failed: {response.text}"
         return True, container_name
@@ -258,19 +258,17 @@ def upload_to_user_container(file_path, container_name, file_name, content_type=
 
     try:
         with open(file_path, 'rb') as file:
-            response = requests.put(url, headers=headers, data=file, verify=False)
+            response = requests.put(url, headers=headers, data=file, verify=True)
             response.raise_for_status()
         return True, url
     except Exception as e:
         return False, str(e)
 
 
-@csrf_exempt
+@login_required
+@require_POST
 def upload_dataset(request):
     try:
-        if request.method != 'POST':
-            return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
-
         if request.GET.get('finalize') == 'true':
             return finalize_upload(request)
 
@@ -279,8 +277,14 @@ def upload_dataset(request):
         if not file_chunk:
             return JsonResponse({'status': 'error', 'message': 'No file chunk received'}, status=400)
 
-        chunk_number = int(request.POST.get('chunkNumber', 0))
-        total_chunks = int(request.POST.get('totalChunks', 1))
+        try:
+            chunk_number = int(request.POST.get('chunkNumber', 0))
+            total_chunks = int(request.POST.get('totalChunks', 1))
+            file_size = int(request.POST.get('fileSize', 0))
+        except (TypeError, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid chunk metadata'}, status=400)
+        if total_chunks < 1 or total_chunks > 10000 or not 0 <= chunk_number < total_chunks or file_size < 0:
+            return JsonResponse({'status': 'error', 'message': 'Invalid chunk bounds'}, status=400)
         upload_id = request.POST.get('uploadId')
         file_name = sanitize_filename(request.POST.get('fileName', ''))
         file_size = int(request.POST.get('fileSize', 0))
@@ -299,6 +303,7 @@ def upload_dataset(request):
             upload_tracker[upload_id] = {
                 'file_name': file_name,
                 'file_size': file_size,
+                'owner_user_id': request.user.pk,
                 'total_chunks': total_chunks,
                 'chunks_received': set(),
                 'metadata': metadata,
@@ -310,8 +315,14 @@ def upload_dataset(request):
         if not validate_upload_id(upload_id) or upload_id not in upload_tracker:
             return JsonResponse({'status': 'error', 'message': 'Invalid upload ID'}, status=400)
 
+        upload_info = upload_tracker[upload_id]
+        if upload_info['owner_user_id'] != request.user.pk:
+            raise PermissionDenied
+        if chunk_number >= upload_info['total_chunks']:
+            return JsonResponse({'status': 'error', 'message': 'Chunk number out of range'}, status=400)
+
         # Check for duplicate chunks
-        if chunk_number in upload_tracker[upload_id]['chunks_received']:
+        if chunk_number in upload_info['chunks_received']:
             return JsonResponse({'status': 'error', 'message': 'Duplicate chunk'}, status=400)
 
         # Save chunk locally (temporarily)
@@ -349,6 +360,8 @@ def finalize_upload(request):
             }, status=400)
 
         upload_info = upload_tracker[upload_id]
+        if upload_info['owner_user_id'] != request.user.pk:
+            raise PermissionDenied
         clean_upload_id = upload_id.split('-')[0]  # Extract timestamp part
 
         # Verify all chunks were received
@@ -522,7 +535,7 @@ def cleanup_upload(upload_id):
 ###################################################
 import tempfile
 class MyPygWalkerView(TemplateView):
-    template_name = "dataset/dataset_viewer_fa.html"
+    template_name = "dataset/dataset_viewer.html"
     AUTH_TOKEN = settings.CLOUD_STORAGE_CONFIG['AUTH_TOKEN']
 
     def get_first_download_url(self, download_links):
@@ -740,7 +753,7 @@ def dataset_annotation_request_fa(request, pk=None):
     dataset = get_object_or_404(Dataset, id=pk)
     annotation_requests = AnnotationRequest.objects.filter(dataset=dataset.id).order_by('-requestDateTime')
     annotation_responses = AnnotationResponse.objects.filter(dataset=dataset.id).order_by('-responseDate')
-    return render(request, 'dataset/dataset_annotation_request_fa.html', context={'dataset': dataset,'annotation_requests': annotation_requests,'annotation_responses': annotation_responses})
+    return render(request, 'dataset/dataset_annotation_request.html', context={'dataset': dataset,'annotation_requests': annotation_requests,'annotation_responses': annotation_responses})
 
 
 def create_annotation_request(request):
@@ -773,7 +786,7 @@ def create_annotation_request(request):
                                    , requestDateTime=datetime.now()
                                    )
 
-            return render(request, 'dataset/dataset_annotation_request_fa.html', context={})
+            return render(request, 'dataset/dataset_annotation_request.html', context={})
 
 
 def dataset_annotation_list_fa(request):
@@ -804,11 +817,11 @@ def dataset_annotation_list_fa(request):
     page_number = request.GET.get('page')
     paginator = Paginator(all_annotation_requests, 9)
     annotation_requests = paginator.get_page(page_number)
-    return render(request, 'dataset/dataset_annotation_list_fa.html', context={'annotation_requests': annotation_requests})
+    return render(request, 'dataset/dataset_annotation_list.html', context={'annotation_requests': annotation_requests})
 
 
 def dataset_annotation_record_fa(request, pk=None):
-    return render(request, 'dataset/dataset_annotation_record_fa.html', context={})
+    return render(request, 'dataset/dataset_annotation_record.html', context={})
 
 
 ###################################################

@@ -1,3 +1,4 @@
+const workflowMessages = () => (window.DataHubWorkflow && window.DataHubWorkflow.messages) || {};
 let dt_data;
 let anonymized_data;
 //************************************************
@@ -6,7 +7,7 @@ let anonymized_data;
 //************************************************
 async function get_predefined_tags() {
     try {
-        const response = await fetch('/dataset/predefined_tags/');
+        const response = await fetch((window.DataHubWorkflow || {}).tagsUrl || '/dataset/predefined_tags/');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -140,12 +141,13 @@ function createMetaDataRows(adColumns) {
     let metaHtml = '';
 
     for (let i = 0; i < adColumns.length; i++) {
+        const safeColumnName = String(adColumns[i]['data'] ?? '').replace(/[&<>\"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[character]));
         let metaHtmlRow = ` <div class="repeater-wrapper pt-0 pt-md-0" data-repeater-item>
                                 <div class="d-flex border rounded position-relative pe-0">
                                     <div class="row w-100 p-3">
 
                                         <div class="col-md-3 col-12 mb-md-0 mb-3">
-                                            <input class="form-control mb-3" id="group-a[${i}][col_name]" name="group-a[${i}][col_name]" min="3" value="${adColumns[i]['data']}" placeholder="عنوان" type="text"/>
+                                            <input class="form-control mb-3" id="group-a[${i}][col_name]" name="group-a[${i}][col_name]" min="3" value="${safeColumnName}" placeholder="Column name" type="text"/>
                                         </div>
 
                                         <div class="col-md-2 col-12 mb-md-0 mb-3">
@@ -156,7 +158,7 @@ function createMetaDataRows(adColumns) {
                                         </div>
 
                                         <div class="col-md-5 col-12 mb-md-0 mb-3">
-                                            <textarea id="group-a[${i}][col_desc]" name="group-a[${i}][col_desc]" class="form-control" placeholder="توضیحات" rows="1"></textarea>
+                                            <textarea id="group-a[${i}][col_desc]" name="group-a[${i}][col_desc]" class="form-control" placeholder="Description" rows="1"></textarea>
                                         </div>
 
                                         <div class="col-md-2 col-12 mb-md-0 mb-3">
@@ -729,7 +731,7 @@ async function finalizeUpload(url, csrfToken, uploadId) {
 
     try {
         // Extract just the numeric part of the upload ID
-        const cleanUploadId = uploadId.split('-')[0];
+        const cleanUploadId = uploadId;
 
         const response = await fetch(`${url}?finalize=true&uploadId=${encodeURIComponent(uploadId)}`, {
             method: "POST",
@@ -752,7 +754,7 @@ async function finalizeUpload(url, csrfToken, uploadId) {
     } catch (error) {
         console.error('Finalization error details:', {
             originalUploadId: uploadId,
-            cleanUploadId: uploadId.split('-')[0],
+            cleanUploadId: uploadId,
             error: error.message
         });
         throw error;
@@ -774,42 +776,42 @@ function updateProgress(percent, message, isError = false) {
     if (isError) {
         progressBar.classList.remove('bg-success');
         progressBar.classList.add('bg-danger');
-        uploadStatus.textContent = 'آپلود ناموفق بود';
+    uploadStatus.textContent = (window.DataHubWorkflow?.messages?.uploadFailed || 'Upload failed.');
         uploadStatus.style.direction = 'rtl';
     } else if (percent >= 100) {
         progressBar.classList.remove('bg-danger');
         progressBar.classList.add('bg-success');
-        uploadStatus.textContent = 'آپلود با موفقیت انجام شد!';
+    uploadStatus.textContent = (window.DataHubWorkflow?.messages?.uploadComplete || 'Upload complete.');
         uploadStatus.style.direction = 'rtl';
     } else {
         progressBar.classList.remove('bg-danger');
         progressBar.classList.remove('bg-success');
-        uploadStatus.textContent = 'در حال آپلود...';
+        uploadStatus.textContent = (window.DataHubWorkflow?.messages?.uploading || 'Uploading ...');
         uploadStatus.style.direction = 'rtl';
     }
 }
 
 async function checkTempMetaData1() {
     if (!$('#question_verify').is(':checked')) {
-        alert('Please verify your submission');
+        alert(workflowMessages().verify || 'Please confirm the submission.');
         return;
     }
 
     const fileInput = document.getElementById('dataset_file');
     parquet_dataset = convertJsonToParquet()
     if (!parquet_dataset) {
-        alert('no parquet file ');
+        alert(workflowMessages().uploadFailed || 'Could not create the file.');
         return;
     }
 
     const file = fileInput.files[0];
-    const csrfToken = getCookie('csrftoken') || window.csrfToken;
+    const csrfToken = getCookie('csrftoken') || window.DataHubWorkflow?.csrfToken;
 
     try {
         document.getElementById('upload-container').style.display = 'block';
-        const result = await uploadFile(file, saveMetaDataUrl, csrfToken);
+        const result = await uploadFile(file, window.DataHubWorkflow?.uploadUrl, csrfToken);
         console.log('Upload successful:', result);
-        alert('File and metadata saved successfully!');
+        alert(workflowMessages().uploadComplete || 'File and metadata saved successfully.');
         return result;
     } catch (error) {
         console.error('Upload failed:', error);
@@ -820,7 +822,7 @@ async function checkTempMetaData1() {
 
 async function checkTempMetaData2(jsonFile) {
     if (!$('#question_verify').is(':checked')) {
-        alert('Please verify your submission');
+        alert(workflowMessages().verify || 'Please confirm the submission.');
         return;
     }
 
@@ -829,7 +831,7 @@ async function checkTempMetaData2(jsonFile) {
     try {
         parquet_dataset = await convertJsonToParquet(jsonFile);
         if (!parquet_dataset) {
-            alert('Failed to create Parquet file');
+            alert(workflowMessages().uploadFailed || 'Could not create the file.');
             return;
         }
     } catch (error) {
@@ -837,14 +839,14 @@ async function checkTempMetaData2(jsonFile) {
         return;
     }
 
-    const csrfToken = getCookie('csrftoken') || window.csrfToken;
+    const csrfToken = getCookie('csrftoken') || window.DataHubWorkflow?.csrfToken;
 
     try {
         document.getElementById('upload-container').style.display = 'block';
         // Upload the Parquet file instead of the original JSON
-        const result = await uploadFile(parquet_dataset, saveMetaDataUrl, csrfToken);
+        const result = await uploadFile(parquet_dataset, window.DataHubWorkflow?.uploadUrl, csrfToken);
         console.log('Upload successful:', result);
-        alert('File and metadata saved successfully!');
+        alert(workflowMessages().uploadComplete || 'File and metadata saved successfully.');
         return result;
     } catch (error) {
         console.error('Upload failed:', error);
@@ -855,23 +857,23 @@ async function checkTempMetaData2(jsonFile) {
 
 async function checkTempMetaData(jsonInput) {
     if (!$('#question_verify').is(':checked')) {
-        alert('Please verify your submission');
+        alert(workflowMessages().verify || 'Please confirm the submission.');
         return;
     }
 
     try {
         const parquet_dataset = await convertJsonToParquet(jsonInput);
         if (!parquet_dataset) {
-            alert('Failed to create Parquet file');
+            alert(workflowMessages().uploadFailed || 'Could not create the file.');
             return;
         }
 
-        const csrfToken = getCookie('csrftoken') || window.csrfToken;
+        const csrfToken = getCookie('csrftoken') || window.DataHubWorkflow?.csrfToken;
         document.getElementById('upload-container').style.display = 'block';
 
-        const result = await uploadFile(parquet_dataset, saveMetaDataUrl, csrfToken);
+        const result = await uploadFile(parquet_dataset, window.DataHubWorkflow?.uploadUrl, csrfToken);
         console.log('Upload successful:', result);
-        alert('File and metadata saved successfully!');
+        alert(workflowMessages().uploadComplete || 'File and metadata saved successfully.');
         return result;
     } catch (error) {
         console.error('Error:', error);
@@ -889,4 +891,3 @@ document.getElementById('btn_upload_dataset').addEventListener('click', async fu
         console.error('Upload error:', error);
     }
 });
-

@@ -9,6 +9,8 @@ urlpatterns = [
     path('', include("home.urls")),
     path('account/', include('account.urls', namespace='account')),
     path('dataset/', include('dataset.urls', namespace='dataset')),
+    path('marketplace/', include('marketplace.urls', namespace='marketplace')),
+    path('i18n/', include('django.conf.urls.i18n')),
 
     path("pygwalker/", include("djangoaddicts.pygwalker.urls"), ),
 
@@ -19,4 +21,3 @@ handler404 = "account.views.custom_page_not_found"
 handler403 = "account.views.custom_permission_denied"
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

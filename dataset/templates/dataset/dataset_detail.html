@@ -1,0 +1,533 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load my_filters %}
+{% load humanize %}
+
+{% block body_class %}dataset-detail-body{% endblock %}
+
+{% block content %}
+<div class="container-xxl flex-grow-1 container-p-y dataset-detail-page">
+    <!-- Header Section -->
+    <div class="dataset-detail-hero card mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="flex-shrink-0">
+                            {% with provider=dataset.referenceOwner|default:''|lower %}
+                                <div class="dataset-detail-logo-wrap">
+                                    {% if provider == 'huggingface' or provider == 'hugging face' %}
+                                        <img src="{% static 'logo/huggingface.png' %}" class="dataset-detail-logo" alt="Hugging Face" />
+                                    {% elif provider == 'kaggle' %}
+                                        <img src="{% static 'logo/kaggle.png' %}" class="dataset-detail-logo" alt="Kaggle" />
+                                    {% elif provider == 'paperwithcode' or provider == 'paper with code' %}
+                                        <img src="{% static 'logo/paperwithcode.png' %}" class="dataset-detail-logo" alt="Papers with Code" />
+                                    {% else %}
+                                        <img src="{% static 'logo/datahub.png' %}" class="dataset-detail-logo" alt="DataHub" />
+                                    {% endif %}
+                                </div>
+                            {% endwith %}
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                                <span class="dataset-detail-source">
+                                    <i class="ti ti-world me-1"></i>
+                                    {% with provider=dataset.referenceOwner|default:''|lower %}
+                                        {% if provider == 'huggingface' or provider == 'hugging face' %}Hugging Face
+                                        {% elif provider == 'kaggle' %}Kaggle
+                                        {% elif provider == 'paperwithcode' or provider == 'paper with code' %}Papers with Code
+                                        {% else %}DataHub{% endif %}
+                                    {% endwith %}
+                                </span>
+                                {% if dataset.format %}<span class="badge bg-label-secondary">{{ dataset.format }}</span>{% endif %}
+                            </div>
+                            <h1 class="dataset-detail-title mb-2">{{ dataset.name }}</h1>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <span class="text-muted"><i class="ti ti-user me-1"></i>{{ dataset.owner }}</span>
+                                <span class="text-muted">•</span>
+                                <span class="text-muted"><i class="ti ti-calendar me-1"></i>{{ dataset.created|to_jalali_s }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% if dataset.dataset_tags %}
+                    <div class="mb-3">
+                        {% for tag in dataset.dataset_tags|split_by:',' %}
+                            {% if tag|length %}<span class="badge bg-label-primary me-1 mb-1">{{ tag }}</span>{% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <div class="dataset-detail-stats d-flex flex-wrap gap-2">
+                        <div class="dataset-detail-stat d-flex align-items-center"><div class="avatar avatar-sm bg-label-success rounded me-2"><i class="ti ti-heart"></i></div><div><small class="text-muted d-block">{{ ui.likes }}</small><span class="fw-semibold" id="total_likes">{{ dataset.total_likes }}</span></div></div>
+                        <div class="dataset-detail-stat d-flex align-items-center"><div class="avatar avatar-sm bg-label-info rounded me-2"><i class="ti ti-file"></i></div><div><small class="text-muted d-block">{{ ui.files }}</small><span class="fw-semibold">{{ dataset.filesCount|default:"-" }}</span></div></div>
+                        <div class="dataset-detail-stat d-flex align-items-center"><div class="avatar avatar-sm bg-label-warning rounded me-2"><i class="ti ti-database"></i></div><div><small class="text-muted d-block">{{ ui.size }}</small><span class="fw-semibold">{{ dataset.size|filesizeformat|default:"-" }}</span></div></div>
+                    </div>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex gap-2 justify-content-md-end">
+                            <button type="button" onclick="dataset_like({{ dataset.id }})" class="btn btn-outline-primary">
+                                {% if request.user in dataset.likes.all %}<i id="like_heart" class="ti ti-heart-filled me-1"></i>{% else %}<i id="like_heart" class="ti ti-heart me-1"></i>{% endif %}
+                                {{ ui.like_action }}
+                            </button>
+                            <div class="dropdown" data-share-url="{{ share_url }}">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" data-bs-display="static" data-bs-boundary="viewport" aria-haspopup="true" aria-expanded="false"><i class="ti ti-share me-1"></i>{{ ui.share }}</button>
+                                <div class="dropdown-menu dropdown-menu-end dataset-share-menu">
+                                    <a class="dropdown-item" href="https://t.me/share/url?text={{ dataset.name|urlencode }}&url={{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-brand-telegram me-2"></i>{{ ui.share_telegram }}</a>
+                                    <a class="dropdown-item" href="https://api.whatsapp.com/send?text={{ dataset.name|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-brand-whatsapp me-2"></i>{{ ui.share_whatsapp }}</a>
+                                    <a class="dropdown-item" href="https://twitter.com/intent/tweet?text={{ dataset.name|urlencode }}%20{{ share_url|urlencode }}" target="_blank" rel="noopener noreferrer"><i class="ti ti-brand-twitter me-2"></i>{{ ui.share_twitter }}</a>
+                                    <button type="button" class="dropdown-item" data-share-copy data-copy-success="{{ ui.link_copied }}" data-copy-failed="{{ ui.link_copy_failed }}"><i class="ti ti-link me-2"></i>{{ ui.copy_link }}</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="share-feedback small" data-share-status role="status" aria-live="polite"></div>
+                        {% if request.user.is_authenticated %}
+                            {% if dataset.requestRequired == 'Yes' %}
+                                <form method="post" class="mt-2">{% csrf_token %}<button name="submit_dataset_request" class="btn btn-primary btn-lg w-100" type="submit"><i class="ti ti-shopping-cart me-1"></i>{{ ui.request_dataset }}</button></form>
+                            {% else %}
+                                <a class="btn btn-primary btn-lg w-100 mt-2" target="_blank" href="{% url 'dataset:dataset_download' pk=dataset.id %}"><i class="ti ti-download me-1"></i>{{ ui.download_dataset }}</a>
+                            {% endif %}
+                        {% endif %}
+                        <div class="mt-2"><span class="badge bg-success fs-6">{% if dataset.price != 0 %}{{ dataset.price|floatformat:"0"|intcomma }} {{ ui.currency }}{% else %}{{ ui.free|default:'Free' }}{% endif %}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Description Card -->
+            <div class="dataset-detail-section card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-info-circle me-2"></i>
+                        {{ ui.description }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dataset.desc %}
+                        <div class="dataset-description-text" dir="auto">
+                            <p class="mb-0">
+                                {{ dataset.desc|linebreaksbr }}
+                            </p>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">{{ ui.no_description }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Dataset Structure -->
+            <div class="dataset-detail-section card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-layout-grid me-2"></i>
+                        {{ ui.structure }}
+                    </h5>
+
+                        <a target="_blank" href="{% url 'dataset:dataset_files' pk=dataset.id %}" class="btn btn-sm btn-outline-primary">
+                            <i class="ti ti-eye me-1"></i>
+                            {{ ui.view_metadata }}
+                        </a>
+
+                </div>
+                <div class="card-body">
+                    {% if dataset.columnDataType %}
+                        <div class="bg-light rounded p-3">
+                            <pre class="mb-0" style="font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace; font-size: 0.875rem; direction: ltr;">
+{{ dataset.columnDataType }}
+                            </pre>
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center py-3">{{ ui.no_structure }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Automated quality and provenance report -->
+            {% if latest_version %}
+            <div class="dataset-detail-section card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0"><i class="ti ti-shield-check me-2"></i>{{ ui.quality_report }}</h5>
+                    {% if latest_version.status == 'processing' %}<span class="badge bg-label-info">{{ ui.quality_processing }}</span>{% elif latest_version.status == 'needs_review' %}<span class="badge bg-label-warning">{{ ui.quality_review }}</span>{% elif latest_version.status == 'failed' %}<span class="badge bg-label-danger">{{ ui.quality_failed }}</span>{% else %}<span class="badge bg-label-secondary">{{ latest_version.status }}</span>{% endif %}
+                </div>
+                <div class="card-body">
+                    {% if quality_report %}
+                        <div class="row g-3 mb-3">
+                            <div class="col-sm-4"><small class="text-muted d-block">{{ ui.quality_score }}</small><strong>{{ quality_report.score|default:'-' }}</strong></div>
+                            <div class="col-sm-4"><small class="text-muted d-block">{{ ui.quality_assets }}</small><strong>{{ quality_report.metrics.source_assets|default:'-' }}</strong></div>
+                            <div class="col-sm-4"><small class="text-muted d-block">{{ ui.quality_normalized }}</small><strong>{{ quality_report.metrics.derived_assets|length|default:'0' }}</strong></div>
+                        </div>
+                        <div class="list-group list-group-flush">
+                            {% for report_asset in quality_report.metrics.assets %}
+                                {% if report_asset.image_profile %}
+                                    <div class="list-group-item px-0 d-flex justify-content-between"><span>{{ ui.quality_image_count }}</span><strong>{{ report_asset.image_profile.sampled_count|default:'0' }} <small class="text-muted">({{ ui.quality_corrupt }}: {{ report_asset.image_profile.corrupt_count|default:'0' }}, {{ ui.quality_duplicates }}: {{ report_asset.image_profile.duplicate_count|default:'0' }})</small></strong></div>
+                                {% endif %}
+                                {% if report_asset.pii_detected or report_asset.value_pii_detected %}<div class="list-group-item px-0 text-warning"><i class="ti ti-alert-triangle me-1"></i>{{ ui.quality_findings }}: PII signals require review.</div>{% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if latest_version.status == 'needs_review' and request.user.is_authenticated and request.user == dataset.user or request.user.is_superuser %}
+                            <form method="post" action="{% url 'dataset:publish_dataset_version' latest_version.id %}" class="mt-3">
+                                {% csrf_token %}<p class="small text-muted mb-2">{{ ui.quality_publish_help }}</p><button type="submit" class="btn btn-primary"><i class="ti ti-world-upload me-1"></i>{{ ui.quality_publish }}</button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <p class="text-muted mb-0">{{ ui.quality_processing }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Comments Section -->
+            <div class="dataset-detail-section card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-message-circle me-2"></i>
+                        {{ ui.comments }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if dataset.comments.all %}
+                        <div class="chat-history">
+                            {% for comment in dataset.comments.all %}
+                                <div class="d-flex align-items-start mb-4">
+                                    <div class="flex-shrink-0">
+                                        {% if comment.user.profile.image %}
+                                            <img src="{{ comment.user.profile.image.url }}" class="rounded-circle" width="40" height="40" alt="avatar">
+                                        {% else %}
+                                            <img src="{% static 'assets/img/avatars/2.png' %}" class="rounded-circle" width="40" height="40" alt="avatar">
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <h6 class="mb-0">{{ comment.user.username }}</h6>
+                                            <small class="text-muted">{{ comment.Date|to_jalali_s }}</small>
+                                        </div>
+                                        <p class="mb-0 text-muted">{{ comment.text }}</p>
+                                    </div>
+                                </div>
+                                {% if not forloop.last %}<hr>{% endif %}
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="ti ti-message-off fs-2 text-muted mb-2"></i>
+                            <p class="text-muted mb-0">{{ ui.no_comments }}</p>
+                        </div>
+                    {% endif %}
+
+                    <!-- Comment Form -->
+                    {% if request.user.is_authenticated %}
+                        <div class="border-top pt-4 mt-4">
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                <textarea name="text" id="text" class="form-control" rows="3" placeholder="{{ ui.comment_placeholder }}" required></textarea>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" name="submit_dataset_comment" class="btn btn-primary">
+                                        <i class="ti ti-send me-1"></i>
+                                        {{ ui.send_comment }}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Dataset Details Card -->
+            <div class="dataset-detail-section card mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-info-square-rounded me-2"></i>
+                        {{ ui.technical_details }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-table-filled me-2"></i>
+                                {{ ui.records }}
+                            </span>
+                            <span class="fw-semibold">{{ dataset.recordsNum|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-file-type-csv me-2"></i>
+                                {{ ui.format }}
+                            </span>
+                            <span class="fw-semibold">{{ dataset.format|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-language me-2"></i>
+                                {{ ui.language_label }}
+                            </span>
+                            <span class="fw-semibold">{{ dataset.language|default:"-" }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center px-0">
+                            <span class="text-muted">
+                                <i class="ti ti-license me-2"></i>
+                                {{ ui.license }}
+                            </span>
+                            <span class="fw-semibold">{{ dataset.license|default:"-" }}</span>
+                        </div>
+                        {% if dataset.refLink %}
+                        <div class="list-group-item px-0">
+                            <span class="text-muted d-block mb-1">
+                                <i class="ti ti-link me-2"></i>
+                                {{ ui.reference_link }}
+                            </span>
+                            <a href="{{ dataset.refLink }}" target="_blank" class="text-truncate d-block">
+                                {{ dataset.refLink|truncatechars:30 }}
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Related Products -->
+            <div class="dataset-detail-section card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="ti ti-apps me-2"></i>
+                        {{ ui.related_products }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="nav-align-top">
+                        <ul class="nav nav-tabs" role="tablist">
+                            {% if dataset.products.all|has_product_type:"Paper" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link active" role="tab" data-bs-toggle="tab" data-bs-target="#papers">{{ ui.papers }}</button>
+                            </li>
+                            {% endif %}
+                            {% if dataset.products.all|has_product_type:"Model" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link {% if not dataset.products.all|has_product_type:'Paper' %}active{% endif %}" role="tab" data-bs-toggle="tab" data-bs-target="#models">{{ ui.models }}</button>
+                            </li>
+                            {% endif %}
+                            {% if dataset.products.all|has_product_type:"Service" %}
+                            <li class="nav-item">
+                                <button type="button" class="nav-link {% if not dataset.products.all|has_product_type:'Paper' and not dataset.products.all|has_product_type:'Model' %}active{% endif %}" role="tab" data-bs-toggle="tab" data-bs-target="#services">{{ ui.services }}</button>
+                            </li>
+                            {% endif %}
+                        </ul>
+                        <div class="tab-content">
+                            <!-- Papers Tab -->
+                            {% if dataset.products.all|has_product_type:"Paper" %}
+                            <div class="tab-pane fade show active" id="papers" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Paper' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="paper">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-primary rounded">
+                                                        <i class="ti ti-file-text"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Models Tab -->
+                            {% if dataset.products.all|has_product_type:"Model" %}
+                            <div class="tab-pane fade {% if not dataset.products.all|has_product_type:'Paper' %}show active{% endif %}" id="models" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Model' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="model">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-success rounded">
+                                                        <i class="ti ti-brain"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            <!-- Services Tab -->
+                            {% if dataset.products.all|has_product_type:"Service" %}
+                            <div class="tab-pane fade {% if not dataset.products.all|has_product_type:'Paper' and not dataset.products.all|has_product_type:'Model' %}show active{% endif %}" id="services" role="tabpanel">
+                                {% for product in dataset.products.all %}
+                                    {% if product.type == 'Service' %}
+                                        <div class="d-flex align-items-center mb-3">
+                                            <div class="flex-shrink-0">
+                                                {% if product.image %}
+                                                    <img src="{{ product.image.url }}" class="rounded" width="40" height="40" alt="service">
+                                                {% else %}
+                                                    <div class="avatar avatar-sm bg-label-warning rounded">
+                                                        <i class="ti ti-server"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <a href="{{ product.link }}" target="_blank" class="fw-semibold d-block">{{ product.title }}</a>
+                                                <small class="text-muted">{{ product.productDate|to_jalali_s }}</small>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Similar Datasets -->
+    {% if similar_datasets %}
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">
+                <i class="ti ti-database-share me-2"></i>
+                {{ ui.similar }}
+            </h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for dataset in similar_datasets %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 hover-shadow">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <span class="badge bg-label-primary">{{ dataset.language }}</span>
+                                <small class="text-muted">{{ dataset.size|filesizeformat }}</small>
+                            </div>
+                            <h6 class="card-title">
+                                <a href="{% url 'dataset:dataset_detail' pk=dataset.id %}" class="text-dark">{{ dataset.name }}</a>
+                            </h6>
+                            <p class="card-text text-muted small">{{ dataset.owner }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="ti ti-clock me-1"></i>
+                                    {{ dataset.created|to_jalali_s }}
+                                </small>
+                                <div class="d-flex gap-1">
+                                    {% for tag in dataset.dataset_tags|split_by:','|slice:":2" %}
+                                        <span class="badge bg-label-secondary badge-sm">{{ tag }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+.hover-shadow:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.badge-sm {
+    font-size: 0.7em;
+    padding: 0.3em 0.6em;
+}
+</style>
+
+<script>
+function dataset_like(dataset_id){
+    var like_heart_element = document.getElementById('like_heart');
+    var total_likes_element = document.getElementById('total_likes');
+    var csrfCookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    var csrfToken = csrfCookie ? decodeURIComponent(csrfCookie.split('=')[1]) : '';
+    $.ajax({
+        url: `/dataset/dataset_like/${dataset_id}`,
+        method: 'POST',
+        headers: {'X-CSRFToken': csrfToken},
+        success: function(response) {
+            total_likes_element.innerHTML = response['total_likes'];
+            like_heart_element.className = response['liked']
+                ? "ti ti-heart-filled me-1"
+                : "ti ti-heart me-1";
+        }
+    });
+}
+
+document.addEventListener('click', function (event) {
+    var copyButton = event.target.closest('[data-share-copy]');
+    if (!copyButton) return;
+    var shareContainer = copyButton.closest('[data-share-url]');
+    var url = shareContainer ? shareContainer.dataset.shareUrl : window.location.href;
+    var status = document.querySelector('[data-share-status]');
+    var statusTimer;
+    var showStatus = function (text, state) {
+        if (!status) return;
+        window.clearTimeout(statusTimer);
+        status.textContent = text;
+        status.className = 'share-feedback small text-' + state;
+        statusTimer = window.setTimeout(function () {
+            status.textContent = '';
+            status.className = 'share-feedback small';
+        }, 3000);
+    };
+    var complete = function () {
+        var original = copyButton.innerHTML;
+        copyButton.innerHTML = '<i class="ti ti-check me-2"></i>' + copyButton.dataset.copySuccess;
+        showStatus(copyButton.dataset.copySuccess, 'success');
+        window.setTimeout(function () { copyButton.innerHTML = original; }, 1800);
+    };
+    var failed = function () {
+        showStatus(copyButton.dataset.copyFailed, 'danger');
+    };
+    var legacyCopy = function () {
+        var input = document.createElement('textarea');
+        input.value = url;
+        input.setAttribute('readonly', '');
+        input.style.position = 'fixed';
+        input.style.opacity = '0';
+        document.body.appendChild(input);
+        input.select();
+        var copied = false;
+        try { copied = document.execCommand('copy'); } catch (error) { copied = false; }
+        input.remove();
+        if (copied) complete(); else failed();
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url).then(complete).catch(legacyCopy);
+    } else {
+        legacyCopy();
+    }
+});
+</script>
+{% endblock %}

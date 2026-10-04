@@ -1,0 +1,64 @@
+{% load static humanize my_filters %}
+
+<section class="dataset-context-header card mb-4" aria-labelledby="dataset-context-title">
+    <div class="dataset-context-header-body">
+        <div class="dataset-context-header-main">
+            <div class="dataset-context-identity">
+                <div class="dataset-context-logo" aria-hidden="true">
+                    {% with provider=dataset.referenceOwner|default:''|lower %}
+                        {% if provider == 'huggingface' or provider == 'hugging face' %}
+                            <img src="{% static 'logo/huggingface.png' %}" alt="Hugging Face">
+                        {% elif provider == 'kaggle' %}
+                            <img src="{% static 'logo/kaggle.png' %}" alt="Kaggle">
+                        {% elif provider == 'paperwithcode' or provider == 'paper with code' %}
+                            <img src="{% static 'logo/paperwithcode.png' %}" alt="Papers with Code">
+                        {% else %}
+                            <img src="{% static 'logo/datahub.png' %}" alt="DataHub">
+                        {% endif %}
+                    {% endwith %}
+                </div>
+                <div class="dataset-context-copy">
+                    <div class="dataset-context-kicker">
+                        {% with provider=dataset.referenceOwner|default:''|lower %}
+                            {% if provider == 'huggingface' or provider == 'hugging face' %}Hugging Face
+                            {% elif provider == 'kaggle' %}Kaggle
+                            {% elif provider == 'paperwithcode' or provider == 'paper with code' %}Papers with Code
+                            {% else %}DataHub{% endif %}
+                        {% endwith %}
+                    </div>
+                    <h1 id="dataset-context-title" class="dataset-context-title">{{ dataset.name }}</h1>
+                    <div class="dataset-context-meta">
+                        <span><i class="ti ti-user me-1" aria-hidden="true"></i>{{ ui.workflow_owner }}: {{ dataset.owner|default:'-' }}</span>
+                        {% if dataset.created %}<span><i class="ti ti-calendar me-1" aria-hidden="true"></i>{{ ui.created }}: {{ dataset.created|to_jalali_s }}</span>{% endif %}
+                        {% if dataset.language %}<span><i class="ti ti-language me-1" aria-hidden="true"></i>{{ ui.language_label }}: {{ dataset.language }}</span>{% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if header_action_url %}
+                <div class="dataset-context-action">
+                    <a href="{{ header_action_url }}" class="btn btn-outline-primary">
+                        <i class="ti {{ header_action_icon|default:'ti-arrow-left' }} me-1" aria-hidden="true"></i>
+                        {{ header_action_label }}
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="dataset-context-facts" aria-label="Dataset metadata">
+            {% if dataset.format %}<span class="dataset-context-fact"><i class="ti ti-file-type-csv" aria-hidden="true"></i>{{ ui.format }}: <strong>{{ dataset.format }}</strong></span>{% endif %}
+            {% if dataset.size %}<span class="dataset-context-fact"><i class="ti ti-database" aria-hidden="true"></i>{{ ui.size }}: <strong dir="ltr">{{ dataset.size|filesizeformat }}</strong></span>{% endif %}
+            {% if dataset.recordsNum %}<span class="dataset-context-fact"><i class="ti ti-table" aria-hidden="true"></i>{{ ui.records }}: <strong dir="ltr">{{ dataset.recordsNum|intcomma }}</strong></span>{% endif %}
+            {% if header_file_count %}<span class="dataset-context-fact"><i class="ti ti-files" aria-hidden="true"></i>{{ ui.files }}: <strong dir="ltr">{{ header_file_count }}</strong></span>{% endif %}
+            {% if dataset.license %}<span class="dataset-context-fact"><i class="ti ti-license" aria-hidden="true"></i>{{ ui.license }}: <strong>{{ dataset.license }}</strong></span>{% endif %}
+        </div>
+
+        {% if dataset.dataset_tags %}
+            <div class="dataset-context-tags" aria-label="Dataset tags">
+                {% for tag in dataset.dataset_tags|split_by:',' %}
+                    {% if tag|length %}<span class="badge bg-label-primary">{{ tag }}</span>{% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>

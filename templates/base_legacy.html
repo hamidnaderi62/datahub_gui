@@ -1,0 +1,20 @@
+{% load static i18n %}
+
+{% get_current_language as CURRENT_LANGUAGE %}
+
+<!DOCTYPE html>
+<html class="light-style layout-navbar-fixed layout-wide" data-assets-path="" data-template="front-pages" data-theme="theme-default" dir="{% if CURRENT_LANGUAGE == 'fa' or CURRENT_LANGUAGE == 'ar' %}rtl{% else %}ltr{% endif %}" lang="{{ CURRENT_LANGUAGE }}">
+<head>
+    <title>{% if current_language == 'en' %}DataHub — Data exchange platform{% elif current_language == 'ar' %}داتاهاب — منصة تبادل البيانات{% else %}پلتفرم تبادل داده - دیتاهاب{% endif %}</title>
+    {% include "includes/header_references.html" %}
+</head>
+<body>
+  {% include "includes/header.html" %}
+
+  {% block content %}
+  {% endblock %}
+
+  {% include "includes/footer.html" %}
+  {% include "includes/footer_references.html" %}
+</body>
+</html>

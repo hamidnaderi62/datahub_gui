@@ -1,741 +1,451 @@
-let dt_data;
-let anonymized_data;
-let uploaded_file_name;
-//************************************************
-// Step 1
-//
-//************************************************
-async function get_predefined_tags() {
+(function () {
+  'use strict';
+
+  const config = window.DataHubWorkflow || {messages: {}};
+  const MAX_CLIENT_BYTES = 50 * 1024 * 1024;
+  const MAX_PREVIEW_ROWS = 100;
+  const CHUNK_SIZE = 5 * 1024 * 1024;
+  const state = {
+    sourceFile: null,
+    sourceRows: [],
+    columns: [],
+    policies: [],
+    anonymizedRows: [],
+    report: null,
+    batchId: null,
+    datasetId: null,
+    uploadComplete: false,
+    uploading: false,
+    tagify: null,
+  };
+
+  const $ = id => document.getElementById(id);
+  const message = (key, fallback) => config.messages[key] || fallback;
+  const safeText = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[character]));
+  const formatBytes = bytes => {
+    if (!bytes) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const index = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    return `${(bytes / Math.pow(1024, index)).toFixed(index ? 1 : 0)} ${units[index]}`;
+  };
+
+  function showActionMessage(text, level = 'success') {
+    const element = $('workflow-action-message');
+    if (!element) return;
+    element.className = `alert alert-${level}`;
+    element.textContent = text;
+    element.scrollIntoView({behavior: 'smooth', block: 'nearest'});
+  }
+
+  function csrfToken() {
+    const cookie = document.cookie.split(';').map(value => value.trim()).find(value => value.indexOf('csrftoken=') === 0);
+    return cookie ? decodeURIComponent(cookie.slice('csrftoken='.length)) : (config.csrfToken || '');
+  }
+
+  function getTags() {
+    if (state.tagify) return state.tagify.value.map(item => item.value).join(',');
     try {
-        const response = await fetch('/dataset/predefined_tags/');
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
+      return JSON.parse($('dataset_tags')?.value || '[]').map(item => item.value).join(',');
     } catch (error) {
-        console.error('Error fetching predefined tags:', error);
-        return []; // Return empty array as fallback
+      return $('dataset_tags')?.value || '';
     }
-}
+  }
 
-async function loadDatasetTags() {
+  async function loadTags() {
+    const input = $('dataset_tags');
+    if (!input || typeof Tagify === 'undefined') return;
+    let whitelist = [];
     try {
-        const dataset_tags_El = document.querySelector('#dataset_tags');
-        if (!dataset_tags_El) {
-            console.error('Dataset tags element not found');
-            return;
-        }
-
-        // Fetch tags before initializing Tagify
-        const predefinedTags = await get_predefined_tags();
-
-        const tagify = new Tagify(dataset_tags_El, {
-            pattern: /^[a-zA-Z0-9]{3,}$/,
-            whitelist: predefinedTags,
-            dropdown: {
-                position: 'text',
-                enabled: 1, // show suggestions after 1 character
-                maxItems: 20,
-                closeOnSelect: false
-            },
-            editTags: true,
-            duplicates: false
-        });
-
-        const button = dataset_tags_El.nextElementSibling;
-        if (button) {
-            button.addEventListener('click', () => tagify.addEmptyTag());
-        }
-
-        // Optional: Handle form submission to convert tags to comma-separated string
-        if (dataset_tags_El.form) {
-            dataset_tags_El.form.addEventListener('submit', function() {
-                const values = tagify.value.map(item => item.value);
-                dataset_tags_El.value = values.join(',');
-            });
-        }
-
+      const response = await fetch(config.tagsUrl);
+      if (response.ok) whitelist = await response.json();
     } catch (error) {
-        console.error('Error initializing Tagify:', error);
+      // Tag suggestions are optional and must not block a local upload.
     }
-}
-
-// Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', loadDatasetTags);
-
-
-//************************************************
-// Step 2
-// Load csv
-//************************************************
-$.fn.dataTable.ext.errMode = 'throw';
-$(document).ready(function () {
-    const my_file = document.getElementById('my_file1')
-    if (my_file) {
-        my_file.addEventListener("change", () => {
-            uploaded_file_name = my_file.files[0].name;
-            console.log(uploaded_file_name);
-            read_csv_big(my_file);
-        });
-    }
-});
-
-function read_csv_big(my_file) {
-    Papa.parse(my_file.files[0], {
-        header: true,
-        worker: true,
-        complete: function (results) {
-            dt_data = results.data
-            console.log(dt_data);
-            json_datatable(dt_data);
-        }
+    state.tagify = new Tagify(input, {
+      whitelist,
+      duplicates: false,
+      dropdown: {enabled: 1, maxItems: 20, closeOnSelect: false},
     });
-}
+    $('add-dataset-tag')?.addEventListener('click', () => state.tagify.addEmptyTag());
+  }
 
-function json_datatable(json_data) {
-    var adColumns = [];
-    Object.keys(json_data[0]).forEach(key => {
-        var col = {
-            data: key,
-            title: key
-        };
-        adColumns.push(col);
-    });
-
-    var tb_container = document.getElementById('tb_container');
-    tb_container.innerHTML = '<table class="datatables-basic table" id="tb1"></table>';
-    console.log(adColumns);
-
-    $('#tb1').DataTable({
-        data: json_data,
-        columns: adColumns,
-        layout: {
-            topStart: {
-                buttons: [
-                    {
-                        extend: 'csv',
-                        text: 'Export CSV',
-                        className: 'btn-space',
-                        exportOptions: {
-                            orthogonal: null
-                        }
-                    },
-                    {
-                        extend: 'selectAll',
-                        className: 'btn-space'
-                    },
-                    'selectNone'
-                ]
-            }
-        },
-        select: true
-    });
-
-    createMetaDataRows(adColumns);
-    // generateColMetaData();
-}
-
-//************************************************
-// Step 3
-// createMetaDataRow
-//************************************************
-function createMetaDataRows(adColumns) {
-    let metaHtml = '';
-
-    for (let i = 0; i < adColumns.length; i++) {
-        let metaHtmlRow = ` <div class="repeater-wrapper pt-0 pt-md-0" data-repeater-item>
-                                <div class="d-flex border rounded position-relative pe-0">
-                                    <div class="row w-100 p-3">
-
-                                        <div class="col-md-3 col-12 mb-md-0 mb-3">
-                                            <input class="form-control mb-3" id="group-a[${i}][col_name]" name="group-a[${i}][col_name]" min="3" value="${adColumns[i]['data']}" placeholder="عنوان" type="text"/>
-                                        </div>
-
-                                        <div class="col-md-2 col-12 mb-md-0 mb-3">
-                                            <select class="form-select mb-3" id="group-a[${i}][col_dtype]" name="group-a[${i}][col_dtype]" onchange="changeDType(this ,${i})">
-                                                <option value="Text" selected>Text</option>
-                                                <option value="Number">Number</option>
-                                            </select>
-                                        </div>
-
-                                        <div class="col-md-5 col-12 mb-md-0 mb-3">
-                                            <textarea id="group-a[${i}][col_desc]" name="group-a[${i}][col_desc]" class="form-control" placeholder="توضیحات" rows="1"></textarea>
-                                        </div>
-
-                                        <div class="col-md-2 col-12 mb-md-0 mb-3">
-                                            <select class="form-select mb-3" id="group-a[${i}][col_di_type]" name="group-a[${i}][col_di_type]">
-                                                <option value="None" selected>None</option>
-                                                <option value="NER">NER</option>
-                                            </select>
-                                        </div>
-                                        
-                                        
-                                    </div>
-                                    <div class="d-flex flex-column align-items-center justify-content-between border-start p-2">
-                                        <i class="ti ti-x cursor-pointer" data-repeater-delete></i>
-                                    </div>
-                                </div>
-                            </div>`
-        metaHtml = metaHtml + metaHtmlRow;
-
-    }
-    let div_container = document.getElementById('div_container');
-    div_container.innerHTML = metaHtml;
-
-    // let col_dtype_val = document.getElementById('group-a[0][col_dtype]').value;
-}
-
-// Change De-identification list by datatype column
-function changeDType(select, i) {
-    let selected_value = select.options[select.selectedIndex].value;
-    if (selected_value === 'Text') {
-        let select_di_type = document.getElementById('group-a[' + i + '][col_di_type]');
-        select_di_type.options.length = 0;
-        select_di_type.add(new Option('None', 'None'));
-        select_di_type.add(new Option('NER', 'NER'));
-    } else if (selected_value === 'Number') {
-        let select_di_type = document.getElementById('group-a[' + i + '][col_di_type]');
-        select_di_type.options.length = 0;
-        select_di_type.add(new Option('None', 'None'));
-        select_di_type.add(new Option('Mean', 'Mean'));
-        select_di_type.add(new Option('Median', 'Median'));
-        select_di_type.add(new Option('Min', 'Min'));
-        select_di_type.add(new Option('Max', 'Max'));
-    }
-}
-
-//************************************************
-// Step 4
-// generateColMetaData
-// create datatable for show ColMetaData
-//************************************************
-$.fn.dataTable.ext.errMode = 'throw';
-let cols;
-
-function generateColMetaData() {
-    cols = [];
-    var div_container = document.querySelector('#div_container')
-    var rows = div_container.children;
-    for (let i = 0; i < rows.length; i++) {
-        if (rows[i].style.display != 'none') {
-            var name = document.getElementsByName("group-a[" + i + "][col_name]")[0].value
-            var dtype = document.getElementsByName("group-a[" + i + "][col_dtype]")[0].value
-            var desc = document.getElementsByName("group-a[" + i + "][col_desc]")[0].value
-            var di_type = document.getElementsByName("group-a[" + i + "][col_di_type]")[0].value
-            //var di_status = '<img alt="User" class="rounded-circle" src="{% static \'svg/flags/fr.svg" width="32">'
-            const col = {'name': name, 'dtype': dtype, 'desc': desc, 'di_type': di_type};
-            cols.push(col)
-        }
-    }
-
-    $('#tb_metadata').DataTable({
-        data: cols,
-        "bDestroy": true,
-        columns: [
-            {data: 'name'},
-            {data: 'dtype'},
-            {data: 'desc'},
-            {data: 'di_type'},
-        ]
-    });
-}
-
-$('#tb_metadata').DataTable({
-    data: [],
-    columns: [
-        {data: 'name'},
-        {data: 'dtype'},
-        {data: 'desc'},
-        {data: 'di_type'},
-    ],
-    layout: {
-        topStart: {
-            buttons: [
-                {
-                    extend: 'csv',
-                    text: 'Export CSV',
-                    className: 'btn-space',
-                    exportOptions: {
-                        orthogonal: null
-                    }
-                },
-
-                {
-                    extend: 'selectAll',
-                    className: 'btn-space'
-                },
-                'selectNone'
-            ]
-        }
-    },
-    select: true
-});
-
-//**************************************************
-// De-Identification
-//**************************************************
-
-function de_identification_dataset() {
-    let input_dataset = dt_data;
-    let output_dataset = '';
-    console.log('de_identification');
-    for (let i = 0; i < cols.length; i++) {
-        if (cols[i]['di_type'] == 'Mean') {
-            input_dataset = replaceAllWithMean(input_dataset, cols[i]['name'])
-        } else if (cols[i]['di_type'] == 'Median') {
-            input_dataset = replaceAllWithMedian(input_dataset, cols[i]['name'])
-        } else if (cols[i]['di_type'] == 'Min') {
-            input_dataset = replaceAllWithMin(input_dataset, cols[i]['name'])
-        } else if (cols[i]['di_type'] == 'Max') {
-            input_dataset = replaceAllWithMax(input_dataset, cols[i]['name'])
-        } else if (cols[i]['di_type'] == 'NER') {
-            input_dataset = replaceAllWithNER(input_dataset, cols[i]['name'])
-        }
-    }
-    output_dataset = input_dataset;
-    anonymized_data = output_dataset
-    anonymized_datatable(anonymized_data)
-    console.log(output_dataset);
-    //console.log(anonymizeJson(dt_data));
-}
-
-
-//**************************************************
-function calculateMean(data, column) {
-    // 1. Extract and convert values to numbers, filtering out invalid entries
-    const numericValues = data
-        .map(item => {
-            const value = item[column];
-            // Handle both string-numbers and actual numbers
-            const num = typeof value === 'string' ? parseFloat(value) : value;
-            return typeof num === 'number' && !isNaN(num) ? num : null;
-        })
-        .filter(value => value !== null);
-
-    if (numericValues.length === 0) {
-        console.warn(`Column "${column}" has no valid numeric values.`);
-        return NaN;
-    }
-
-    // 2. Calculate mean
-    const sum = numericValues.reduce((acc, num) => acc + num, 0);
-    return sum / numericValues.length;
-}
-
-function replaceAllWithMean(data, column) {
-    const meanValue = calculateMean(data, column);
-
-    if (isNaN(meanValue)) {
-        console.warn(`Cannot replace: No valid numeric values in column "${column}".`);
-        return data; // Return original if mean is invalid
-    }
-
-    // Replace only valid numeric values (leave invalid entries as-is)
-    return data.map(item => {
-        const value = item[column];
-        const num = typeof value === 'string' ? parseFloat(value) : value;
-        const shouldReplace = typeof num === 'number' && !isNaN(num);
-
-        return {
-            ...item,
-            [column]: shouldReplace ? meanValue : value
-        };
-    });
-}
-
-//**************************************************
-function calculateMedian(data, column) {
-    // 1. Extract and convert values to numbers, filtering out invalid entries
-    const numericValues = data
-        .map(item => {
-            const value = item[column];
-            // Handle both string-numbers and actual numbers
-            const num = typeof value === 'string' ? parseFloat(value) : value;
-            return typeof num === 'number' && !isNaN(num) ? num : null;
-        })
-        .filter(value => value !== null)
-        .sort((a, b) => a - b); // Numeric sort
-
-    if (numericValues.length === 0) {
-        console.warn(`Column "${column}" has no valid numeric values.`);
-        return NaN;
-    }
-
-    // 2. Calculate median
-    const mid = Math.floor(numericValues.length / 2);
-    return numericValues.length % 2 === 0
-        ? (numericValues[mid - 1] + numericValues[mid]) / 2 // Even length
-        : numericValues[mid]; // Odd length
-}
-
-function replaceAllWithMedian(data, column) {
-    const medianValue = calculateMedian(data, column);
-
-    if (isNaN(medianValue)) {
-        console.warn(`Cannot replace: No valid numeric values in column "${column}".`);
-        return data; // Return original if median is invalid
-    }
-
-    // Replace only valid numeric values (leave invalid entries as-is)
-    return data.map(item => {
-        const value = item[column];
-        const num = typeof value === 'string' ? parseFloat(value) : value;
-        const shouldReplace = typeof num === 'number' && !isNaN(num);
-
-        return {
-            ...item,
-            [column]: shouldReplace ? medianValue : value
-        };
-    });
-}
-
-//**************************************************
-function calculateMin(data, column) {
-    return Math.min(...data.map(item => item[column]));
-}
-
-function replaceAllWithMin(data, column) {
-    const minValue = calculateMin(data, column);
-
-    return data.map(item => ({
-        ...item,
-        [column]: minValue
-    }));
-}
-
-//**************************************************
-function calculateMax(data, column) {
-    return Math.max(...data.map(item => item[column]));
-}
-
-function replaceAllWithMax(data, column) {
-    const maxValue = calculateMax(data, column);
-
-    return data.map(item => ({
-        ...item,
-        [column]: maxValue
-    }));
-}
-
-//**************************************************
-// NER Anonymize - Solution 1
-
-function replaceAllWithNER(data, column) {
-    return data.map(item => ({
-        ...item,
-        [column]: applyNERTags(item[column]) // Replace with standardized tags
-    }));
-}
-
-function applyNERTags(text) {
-    if (typeof text !== "string") return text; // Skip non-strings
-
- // English NER patterns (unchanged)
-    let result = text
-        .replace(/\b[\w.-]+@[\w.-]+\.\w+\b/g, '[EMAIL]') // Emails
-        .replace(/(\+\d{1,3}[- ]?)?(\(\d{3}\)[- ]?|\d{3}[- ]?)\d{3}[- ]?\d{4}\b/g, '[PHONE]') // Phone numbers
-        .replace(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g, '[IP]') // IPv4 addresses
-        .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN]') // Social Security Numbers
-        .replace(/\b(?:\d[ -]*?){13,16}\b/g, '[CREDIT_CARD]') // Credit cards
-        .replace(/\b[A-Z][a-z]+ [A-Z][a-z]+\b/g, '[NAME]') // Full names (e.g., "John Doe")
-        .replace(/\b\d+ [A-Za-z]+,? [A-Za-z]+,? [A-Z]{2}\b/g, '[ADDRESS]'); // Simple addresses (e.g., "123 Main St, New York, NY")
-
-    // Persian NER patterns
-    result = result
-        // Persian names (matches common name patterns)
-        .replace(/[\u0600-\u06FF]{2,}(?:\s+[\u0600-\u06FF]{2,})+/g, '[NAME_FA]')
-        // Persian phone numbers (09XXXXXXXXX or +98...)
-        .replace(/(\+98|\u06F9\u06F8|\u06F9)[\s\u200C\-]?(\d[\s\u200C\-]?){10}/g, '[PHONE_FA]')
-        // Iranian national ID (10 digits)
-        .replace(/\b\d{10}\b/g, '[NATIONAL_ID_IR]')
-        // Persian addresses (simple pattern)
-        .replace(/[\u0600-\u06FF]+\s+[\u0600-\u06FF]+,\s*[\u0600-\u06FF]+/g, '[ADDRESS_FA]')
-        // Dates in Persian format (1402/05/15)
-        .replace(/\b\d{4}\/\d{2}\/\d{2}\b/g, '[DATE_FA]');
-
-    return result;
-}
-
-
-//************************************************
-// Step 5
-// Show De-Identified Data Table
-//************************************************
-function anonymized_datatable(anonymized_data) {
-    var adColumns = [];
-    Object.keys(anonymized_data[0]).forEach(key => {
-        var col = {
-            data: key,
-            title: key
-        };
-        adColumns.push(col);
-    });
-
-    var tb_anonymized_container = document.getElementById('tb_anonymized_container');
-    tb_anonymized_container.innerHTML = '<table class="datatables-basic table" id="tb1_anonymized"></table>';
-    console.log(adColumns);
-
-    $('#tb1_anonymized').DataTable({
-        data: anonymized_data,
-        columns: adColumns,
-        layout: {
-            topStart: {
-                buttons: [
-                    {
-                        extend: 'csv',
-                        text: 'Export CSV',
-                        className: 'btn-space',
-                        exportOptions: {
-                            orthogonal: null
-                        }
-                    },
-                    {
-                        extend: 'selectAll',
-                        className: 'btn-space'
-                    },
-                    'selectNone'
-                ]
-            }
-        },
-        select: true
-    });
-}
-
-//************************************************
-// Step 6
-// Insert Dataset Metadata to DB
-//************************************************
-// Utility function to get cookies
-function getCookie(name) {
-    const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
-        cookie = cookie.trim();
-        if (cookie.startsWith(name + '=')) {
-            return decodeURIComponent(cookie.substring(name.length + 1));
-        }
-    }
-    return null;
-}
-
-// Configuration
-const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
-let uploadId = null;
-let totalChunks = 0;
-let uploadedChunks = 0;
-
-// UI Elements
-const progressBar = document.getElementById('upload-progress');
-const progressText = document.getElementById('upload-progress-text');
-const uploadStatus = document.getElementById('upload-status');
-
-async function uploadChunk(file, chunkNumber, totalChunks, url, csrfToken) {
-    const start = chunkNumber * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    const chunk = file.slice(start, end);
-
-    const formData = new FormData();
-    formData.append('file', chunk);
-    formData.append('chunkNumber', chunkNumber);
-    formData.append('totalChunks', totalChunks);
-    formData.append('uploadId', uploadId);
-    formData.append('fileName', file.name);
-    formData.append('fileSize', file.size);
-    formData.append('fileType', file.type);
-
-    if (chunkNumber === 0) {
-        // First chunk includes metadata
-        formData.append('metadata', JSON.stringify(getMetadata()));
-    }
-
-    const response = await fetch(url, {
-        method: "POST",
-        headers: {
-            "X-CSRFToken": csrfToken,
-        },
-        body: formData
-    });
-
-    if (!response.ok) {
-        throw new Error(`Chunk ${chunkNumber + 1} upload failed: ${response.status}`);
-    }
-
-    return await response.json();
-}
-
-function getMetadata() {
+  function metadata() {
     return {
-        dataset_name: $('#dataset_name').val(),
-        dataset_owner: $('#dataset_owner').val(),
-        dataset_language: $('#dataset_language').val()?.join(',') || '',
-        dataset_license: $('#dataset_license').val(),
-        dataset_format: $('#dataset_format').val(),
-        dataset_recordsNum: $('#dataset_recordsNum').val(),
-        dataset_price: $('#dataset_price').val(),
-        dataset_requestRequired: $('#dataset_requestRequired').val(),
-        dataset_desc: $('#dataset_desc').val(),
-        dataset_tags: getTags(),
-        dataset_columnDataType: cols ? JSON.stringify(cols) : '{}'
-        //dataset_columnDataType: window.cols ? JSON.stringify(window.cols) : '{}'
+      dataset_name: $('dataset_name')?.value.trim() || '',
+      dataset_owner: $('dataset_owner')?.value.trim() || '',
+      dataset_language: Array.from($('dataset_language')?.selectedOptions || []).map(option => option.value).join(','),
+      dataset_license: $('dataset_license')?.value || '',
+      dataset_format: $('dataset_format')?.value || 'Text',
+      dataset_recordsNum: $('dataset_recordsNum')?.value || String(state.anonymizedRows.length || 0),
+      dataset_price: $('dataset_price')?.value || '0',
+      dataset_requestRequired: $('dataset_requestRequired')?.value || 'No',
+      dataset_desc: $('dataset_desc')?.value || '',
+      dataset_tags: getTags(),
+      dataset_columnDataType: state.policies,
+      privacy_plan: {
+        schema_version: 'privacy-plan-v1',
+        execution: 'client_preview_and_transform',
+        source_name: state.sourceFile?.name || '',
+        columns: state.policies,
+        fail_on_residual_pii: true,
+        residual_pii_count: state.report?.residualSignals || 0,
+      },
     };
-}
+  }
 
-function getTags() {
-    try {
-        const tagsValue = $('#dataset_tags').val();
-        return tagsValue ? JSON.parse(tagsValue).map(item => item.value).join(',') : '';
-    } catch (e) {
-        console.warn('Error parsing tags:', e);
-        return '';
+  function isNumeric(value) {
+    if (value === null || value === undefined || String(value).trim() === '') return false;
+    return /^[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?$/.test(String(value).trim());
+  }
+
+  function isDateValue(value) {
+    if (!value || isNumeric(value)) return false;
+    const text = String(value).trim();
+    if (!/^\d{4}[-/.]\d{1,2}[-/.]\d{1,2}/.test(text)) return false;
+    return !Number.isNaN(Date.parse(text));
+  }
+
+  function inferType(values) {
+    const nonEmpty = values.filter(value => value !== null && value !== undefined && String(value).trim() !== '').slice(0, 500);
+    if (!nonEmpty.length) return {type: 'Text', confidence: 0};
+    const numeric = nonEmpty.filter(isNumeric).length / nonEmpty.length;
+    const dates = nonEmpty.filter(isDateValue).length / nonEmpty.length;
+    const booleans = nonEmpty.filter(value => /^(true|false|yes|no|بله|خیر)$/i.test(String(value).trim())).length / nonEmpty.length;
+    if (numeric >= 0.95) return {type: 'Number', confidence: Math.round(numeric * 100)};
+    if (dates >= 0.95) return {type: 'Date', confidence: Math.round(dates * 100)};
+    if (booleans >= 0.95) return {type: 'Boolean', confidence: Math.round(booleans * 100)};
+    return {type: 'Text', confidence: Math.round(Math.max(0.5, 1 - numeric) * 100)};
+  }
+
+  function likelyIdentifier(name) {
+    return /(^|[_\s-])(id|uuid|email|phone|mobile|tel|passport|national|ssn|کد|تلفن|موبایل|ایمیل)([_\s-]|$)/i.test(name);
+  }
+
+  function defaultPolicy(name, type) {
+    if (likelyIdentifier(name)) return 'Mask';
+    if (type === 'Text' && /text|description|comment|note|address|متن|توضیح|نشانی/i.test(name)) return 'NER';
+    return 'None';
+  }
+
+  function typeOptions(type, selected) {
+    const options = {
+      Text: [['None', message('none', 'None')], ['NER', message('ner', 'Detect and mask entities')]],
+      Number: [['None', message('none', 'None')], ['Round', message('round', 'Round values')], ['Bin', message('bin', 'Group into ranges')]],
+      Date: [['None', message('none', 'None')], ['Year', message('year', 'Keep year only')]],
+      Boolean: [['None', message('none', 'None')]],
+      Identifier: [['None', message('none', 'None')], ['Mask', message('mask', 'Replace with a redaction token')]],
+    }[type] || [['None', message('none', 'None')]];
+    return options.map(([value, label]) => `<option value="${safeText(value)}"${value === selected ? ' selected' : ''}>${safeText(label)}</option>`).join('');
+  }
+
+  function renderTable(container, rows, columns) {
+    if (!container) return;
+    if (!rows.length || !columns.length) {
+      container.innerHTML = `<div class="alert alert-secondary mb-0">${safeText(message('noRows', 'The file has no rows.'))}</div>`;
+      return;
     }
-}
+    const visible = rows.slice(0, MAX_PREVIEW_ROWS);
+    const head = columns.map(column => `<th>${safeText(column)}</th>`).join('');
+    const body = visible.map(row => `<tr>${columns.map(column => `<td>${safeText(row[column])}</td>`).join('')}</tr>`).join('');
+    container.innerHTML = `<div class="table-responsive"><table class="table table-sm table-hover align-middle"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  }
 
-async function uploadFile(file, url, csrfToken) {
-    totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    console.log(totalChunks);
-    uploadedChunks = 0;
-    uploadId = null;
+  function renderSourceProfile(file) {
+    const profile = $('source-profile');
+    if (!profile) return;
+    const numeric = state.columns.filter(column => column.type === 'Number').length;
+    const protectedColumns = state.policies.filter(policy => policy.di_type !== 'None').length;
+    profile.textContent = `${file.name} · ${formatBytes(file.size)} · ${state.sourceRows.length} rows · ${state.columns.length} columns · ${numeric} numeric · ${protectedColumns} protected`;
+  }
 
-    updateProgress(0, 'Starting upload...');
+  function renderPolicies() {
+    const container = $('div_container');
+    if (!container) return;
+    container.innerHTML = state.policies.map((policy, index) => `<div class="repeater-wrapper pt-0 pt-md-0 mb-3" data-repeater-item data-column-index="${index}">
+      <div class="d-flex border rounded position-relative pe-0"><div class="row w-100 p-3">
+        <div class="col-md-3 col-12 mb-md-0 mb-3"><label class="form-label">${safeText(message('columnName', 'Column'))}</label><input class="form-control" data-role="col-name" value="${safeText(policy.name)}" type="text"></div>
+        <div class="col-md-2 col-12 mb-md-0 mb-3"><label class="form-label">${safeText(message('dataType', 'Type'))}</label><select class="form-select" data-role="col-dtype">${['Text', 'Number', 'Date', 'Boolean', 'Identifier'].map(value => `<option value="${value}"${policy.dtype === value ? ' selected' : ''}>${safeText(message(value.toLowerCase(), value))}</option>`).join('')}</select></div>
+        <div class="col-md-4 col-12 mb-md-0 mb-3"><label class="form-label">${safeText(message('description', 'Description'))}</label><textarea class="form-control" data-role="col-desc" rows="1">${safeText(policy.desc)}</textarea></div>
+        <div class="col-md-3 col-12 mb-md-0 mb-3"><label class="form-label">${safeText(message('anonymization', 'Privacy action'))}</label><select class="form-select" data-role="col-di-type">${typeOptions(policy.dtype, policy.di_type)}</select><small class="text-muted" data-role="confidence">${safeText(message('confidence', 'Detected'))}: ${policy.confidence}%</small></div>
+      </div><div class="d-flex flex-column align-items-center justify-content-between border-start p-2"><i class="ti ti-x cursor-pointer" data-repeater-delete aria-label="Remove"></i></div></div></div>`).join('');
+    container.querySelectorAll('[data-role="col-dtype"]').forEach(select => select.addEventListener('change', () => {
+      const row = select.closest('[data-column-index]');
+      const index = Number(row.dataset.columnIndex);
+      const action = row.querySelector('[data-role="col-di-type"]');
+      action.innerHTML = typeOptions(select.value, select.value === state.policies[index].dtype ? state.policies[index].di_type : 'None');
+      state.policies[index].dtype = select.value;
+    }));
+    container.querySelectorAll('[data-repeater-delete]').forEach(button => button.addEventListener('click', () => {
+      const row = button.closest('[data-column-index]');
+      state.policies.splice(Number(row.dataset.columnIndex), 1);
+      renderPolicies();
+    }));
+    renderPolicySummary();
+  }
 
-    try {
-        for (let i = 0; i < totalChunks; i++) {
-            updateProgress(i / totalChunks * 100, `Uploading chunk ${i + 1} of ${totalChunks}...`);
+  function renderPolicySummary() {
+    const body = document.querySelector('#tb_metadata tbody');
+    if (!body) return;
+    body.innerHTML = state.policies.map(policy => `<tr><td><strong>${safeText(policy.name)}</strong></td><td>${safeText(policy.dtype)}</td><td>${safeText(policy.di_type)}</td><td><span class="badge bg-label-secondary">${safeText(policy.confidence)}%</span></td></tr>`).join('');
+  }
 
-            const result = await uploadChunk(file, i, totalChunks, url, csrfToken);
+  function collectPolicies() {
+    const rows = Array.from(document.querySelectorAll('#div_container [data-column-index]'));
+    const existing = state.policies;
+    state.policies = rows.map(row => ({
+      name: row.querySelector('[data-role="col-name"]')?.value.trim() || '',
+      dtype: row.querySelector('[data-role="col-dtype"]')?.value || 'Text',
+      desc: row.querySelector('[data-role="col-desc"]')?.value || '',
+      di_type: row.querySelector('[data-role="col-di-type"]')?.value || 'None',
+      confidence: existing[Number(row.dataset.columnIndex)]?.confidence || 0,
+    })).filter(policy => policy.name);
+    renderPolicySummary();
+    return state.policies;
+  }
 
-            if (i === 0 && result.upload_id) {
-                uploadId = result.upload_id;
-            }
+  function createPolicies(rows) {
+    const columns = Object.keys(rows[0] || {});
+    state.columns = columns.map(name => {
+      const inferred = inferType(rows.map(row => row[name]));
+      const dtype = likelyIdentifier(name) ? 'Identifier' : inferred.type;
+      return {name, type: dtype, confidence: inferred.confidence};
+    });
+    state.policies = state.columns.map(column => ({name: column.name, dtype: column.type, desc: '', di_type: defaultPolicy(column.name, column.type), confidence: column.confidence}));
+    renderPolicies();
+  }
 
-            uploadedChunks++;
-            updateProgress(uploadedChunks / totalChunks * 100, `Uploaded chunk ${i + 1} of ${totalChunks}`);
-        }
-
-        updateProgress(100, 'Finalizing upload...');
-        const finalResponse = await finalizeUpload(url, csrfToken, uploadId);
-        return finalResponse;
-
-    } catch (error) {
-        updateProgress(uploadedChunks / totalChunks * 100, `Upload failed: ${error.message}`, true);
-        throw error;
-    }
-}
-
-async function finalizeUpload(url, csrfToken, uploadId) {
-    if (!uploadId) {
-        throw new Error('Missing upload ID for finalization');
-    }
-
-    try {
-        // Extract just the numeric part of the upload ID
-        const cleanUploadId = uploadId.split('-')[0];
-
-        const response = await fetch(`${url}?finalize=true&uploadId=${encodeURIComponent(uploadId)}`, {
-            method: "POST",
-            headers: {
-                "X-CSRFToken": csrfToken,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                action: 'complete',
-                upload_id: cleanUploadId  // Send clean ID in body too
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(
-                `Finalization failed (${response.status}): ${errorData.message || response.statusText}`
-            );
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error('Finalization error details:', {
-            originalUploadId: uploadId,
-            cleanUploadId: uploadId.split('-')[0],
-            error: error.message
-        });
-        throw error;
-    }
-}
-
-
-
-
-function updateProgress(percent, message, isError = false) {
-    progressBar.style.width =`${percent}%`;
-    progressBar.setAttribute('aria-valuenow', percent);
-    progressText.textContent = message;
-
-    // Set RTL direction for progress text
-    progressText.style.direction = 'rtl';
-    progressText.style.textAlign = 'right';
-
-    if (isError) {
-        progressBar.classList.remove('bg-success');
-        progressBar.classList.add('bg-danger');
-        uploadStatus.textContent = 'آپلود ناموفق بود';
-        uploadStatus.style.direction = 'rtl';
-    } else if (percent >= 100) {
-        progressBar.classList.remove('bg-danger');
-        progressBar.classList.add('bg-success');
-        uploadStatus.textContent = 'آپلود با موفقیت انجام شد!';
-        uploadStatus.style.direction = 'rtl';
+  async function parseFile(file) {
+    if (!file) return;
+    if (file.size > MAX_CLIENT_BYTES) throw new Error(message('fileTooLarge', 'This local workflow supports files up to 50 MB. Use the scalable multi-file workflow for larger files.'));
+    state.sourceFile = file;
+    let rows;
+    if (/\.(xlsx|xls)$/i.test(file.name)) {
+      if (typeof XLSX === 'undefined') throw new Error(message('excelUnavailable', 'Excel support is unavailable. Please try CSV or enable the spreadsheet parser.'));
+      const workbook = XLSX.read(await file.arrayBuffer(), {type: 'array', cellDates: true, cellFormula: false});
+      const sheetName = workbook.SheetNames[0];
+      if (!sheetName) throw new Error(message('profileFailed', 'Could not find a worksheet.'));
+      rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], {defval: '', raw: false});
     } else {
-        progressBar.classList.remove('bg-danger');
-        progressBar.classList.remove('bg-success');
-        uploadStatus.textContent = 'در حال آپلود...';
-        uploadStatus.style.direction = 'rtl';
+      rows = await new Promise((resolve, reject) => Papa.parse(file, {header: true, worker: true, skipEmptyLines: 'greedy', complete: result => resolve(result.data || []), error: reject}));
     }
-}
+    state.sourceRows = rows.filter(row => row && Object.values(row).some(value => String(value ?? '').trim() !== ''));
+    if (!state.sourceRows.length) throw new Error(message('noRows', 'The selected file has no data rows.'));
+    if ($('final-records')) $('final-records').value = String(state.sourceRows.length);
+    createPolicies(state.sourceRows);
+    renderTable($('tb_container'), state.sourceRows, state.columns.map(column => column.name));
+    renderSourceProfile(file);
+  }
 
+  const detectors = [
+    {type: 'EMAIL', pattern: /\b[^\s@]+@[^\s@]+\.[^\s@]+\b/gi},
+    {type: 'PHONE', pattern: /(?:\+?\d[\d\s().-]{7,}\d)/g},
+    {type: 'IP', pattern: /\b(?:\d{1,3}\.){3}\d{1,3}\b/g},
+    {type: 'CARD', pattern: /\b(?:\d[ -]*?){13,16}\b/g},
+    {type: 'NATIONAL_ID', pattern: /\b\d{10}\b/g},
+  ];
 
-async function checkTempMetaData(jsonInput) {
-    if (!$('#question_verify').is(':checked')) {
-        alert('Please verify your submission');
-        return;
+  function maskSensitiveText(value, useNer) {
+    if (value === null || value === undefined) return value;
+    let text = String(value);
+    detectors.forEach(detector => { text = text.replace(detector.pattern, `[${detector.type}]`); });
+    if (useNer && typeof window.nlp === 'function') {
+      try {
+        const documentView = window.nlp(text);
+        if (documentView.people) documentView.people().replaceWith('[PERSON]');
+        if (documentView.places) documentView.places().replaceWith('[LOCATION]');
+        if (documentView.organizations) documentView.organizations().replaceWith('[ORG]');
+        text = documentView.text();
+      } catch (error) {
+        // Regex detectors remain the safe fallback for unsupported languages.
+      }
     }
+    return text;
+  }
 
+  function transformValue(value, policy) {
+    if (value === null || value === undefined || String(value).trim() === '') return value;
+    if (policy.di_type === 'NER') return maskSensitiveText(value, true);
+    if (policy.di_type === 'Mask') return '[REDACTED]';
+    if (policy.di_type === 'Round' && isNumeric(value)) return Number(Number(value).toFixed(1));
+    if (policy.di_type === 'Bin' && isNumeric(value)) return Math.floor(Number(value) / 5) * 5;
+    if (policy.di_type === 'Year' && isDateValue(value)) return new Date(value).getUTCFullYear();
+    return value;
+  }
+
+  function de_identification_dataset() {
+    collectPolicies();
+    const changedRows = new Set();
+    state.anonymizedRows = state.sourceRows.map((row, rowIndex) => {
+      const transformed = {...row};
+      state.policies.forEach(policy => {
+        const nextValue = transformValue(row[policy.name], policy);
+        if (String(nextValue ?? '') !== String(row[policy.name] ?? '')) changedRows.add(rowIndex);
+        transformed[policy.name] = nextValue;
+      });
+      return transformed;
+    });
+    let residualSignals = 0;
+    state.anonymizedRows.slice(0, 1000).forEach(row => Object.values(row).forEach(value => {
+      detectors.forEach(detector => { detector.pattern.lastIndex = 0; if (detector.pattern.test(String(value ?? ''))) residualSignals += 1; });
+    }));
+    state.report = {changedRows: changedRows.size, residualSignals};
+    renderTable($('tb_anonymized_container'), state.anonymizedRows, state.policies.map(policy => policy.name));
+    const summary = $('anonymized-summary');
+    if (summary) {
+      summary.className = residualSignals ? 'alert alert-warning' : 'alert alert-success';
+      summary.textContent = `${message('transformSummary', 'Transformation complete')}: ${changedRows.size} rows changed. ${residualSignals ? message('residualPii', 'Review possible residual PII before publishing.') : message('noResidualPii', 'No common residual PII signals found in the sample.')}`;
+    }
+    showActionMessage(
+      residualSignals ? `${message('deidentificationComplete', 'De-identification completed.')} ${message('residualPii', 'Review possible residual PII before publishing.')}` : message('deidentificationComplete', 'De-identification completed successfully. Review the preview.'),
+      residualSignals ? 'warning' : 'success'
+    );
+    return state.anonymizedRows;
+  }
+  window.de_identification_dataset = de_identification_dataset;
+  window.generateColMetaData = function () {
+    collectPolicies();
+    showActionMessage(message('changesSaved', 'Column privacy methods were saved successfully.'));
+  };
+
+  function csvFileFromRows() {
+    const columns = state.policies.map(policy => policy.name);
+    const rows = state.anonymizedRows.map(row => {
+      const output = {};
+      columns.forEach(column => {
+        let value = row[column];
+        if (typeof value === 'string' && /^[=+\-@]/.test(value)) value = `'${value}`;
+        output[column] = value;
+      });
+      return output;
+    });
+    const csv = Papa.unparse(rows, {columns});
+    const baseName = (state.sourceFile?.name || 'dataset').replace(/\.(csv|tsv|xlsx|xls)$/i, '');
+    return new File([csv], `deidentified_${baseName}.csv`, {type: 'text/csv'});
+  }
+
+  async function createBatch(file) {
+    const response = await fetch(config.createBatchUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({metadata: metadata(), files: [{name: file.name, relative_path: file.name, size: file.size}]})});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.status !== 'success') throw new Error(data.message || `Batch creation failed (${response.status})`);
+    state.batchId = data.batch_id; state.datasetId = data.dataset_id;
+  }
+
+  function setProgress(percent, text, error) {
+    const bar = $('upload-progress');
+    if (bar) { bar.style.width = `${percent}%`; bar.setAttribute('aria-valuenow', String(Math.round(percent))); bar.classList.toggle('bg-danger', !!error); bar.classList.toggle('bg-success', !error && percent >= 100); }
+    if ($('upload-progress-text')) $('upload-progress-text').textContent = text;
+    if ($('upload-status')) $('upload-status').textContent = text;
+  }
+
+  async function uploadChunked(file) {
+    const totalChunks = Math.max(1, Math.ceil(file.size / CHUNK_SIZE));
+    let uploadId = null;
+    for (let chunkNumber = 0; chunkNumber < totalChunks; chunkNumber += 1) {
+      const start = chunkNumber * CHUNK_SIZE;
+      const body = new FormData();
+      body.append('file', file.slice(start, Math.min(start + CHUNK_SIZE, file.size)), file.name); body.append('chunkNumber', String(chunkNumber)); body.append('totalChunks', String(totalChunks)); body.append('uploadId', uploadId || ''); body.append('batchId', state.batchId); body.append('relativePath', file.name); body.append('fileName', file.name); body.append('fileSize', String(file.size)); body.append('fileType', file.type);
+      if (chunkNumber === 0) body.append('metadata', JSON.stringify({relative_path: file.name, original_name: file.name, privacy_applied: true}));
+      const response = await fetch(config.uploadUrl, {method: 'POST', headers: {'X-CSRFToken': csrfToken()}, body});
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data.status !== 'success') throw new Error(data.message || `Chunk ${chunkNumber + 1} failed`);
+      uploadId = data.upload_id || uploadId;
+      setProgress(((start + Math.min(CHUNK_SIZE, file.size - start)) / file.size) * 100, `${message('uploading', 'Uploading ...')} ${chunkNumber + 1}/${totalChunks}`);
+    }
+    const response = await fetch(`${config.uploadUrl}?finalize=true&uploadId=${encodeURIComponent(uploadId)}`, {method: 'POST', headers: {'X-CSRFToken': csrfToken()}});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.status !== 'success') throw new Error(data.message || 'Finalization failed');
+    return data;
+  }
+
+  async function uploadDirect(file) {
+    const sessionResponse = await fetch(config.directCreateUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({batch_id: state.batchId, file_name: file.name, relative_path: file.name, file_size: file.size, content_type: file.type})});
+    const session = await sessionResponse.json().catch(() => ({}));
+    if (!sessionResponse.ok || session.status !== 'success') throw new Error(session.message || 'Could not start multipart upload');
+    const parts = [];
     try {
-        const csv_dataset = await convertJsonToCsv(jsonInput);
-        if (!csv_dataset) {
-            alert('Failed to create csv file');
-            return;
-        }
-
-        const csrfToken = getCookie('csrftoken') || window.csrfToken;
-        document.getElementById('upload-container').style.display = 'block';
-
-        const result = await uploadFile(csv_dataset, saveMetaDataUrl, csrfToken);
-        console.log('Upload successful:', result);
-        alert('File and metadata saved successfully!');
-        return result;
+      for (let partNumber = 1; partNumber <= session.total_parts; partNumber += 1) {
+        const start = (partNumber - 1) * session.part_size;
+        const urlResponse = await fetch(config.directPartUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({upload_id: session.upload_id, part_number: partNumber})});
+        const urlData = await urlResponse.json().catch(() => ({}));
+        if (!urlResponse.ok || urlData.status !== 'success') throw new Error(urlData.message || `Could not sign part ${partNumber}`);
+        const uploadResponse = await fetch(urlData.url, {method: 'PUT', body: file.slice(start, Math.min(start + session.part_size, file.size))});
+        if (!uploadResponse.ok) throw new Error(`Direct upload failed for part ${partNumber}`);
+        const etag = uploadResponse.headers.get('ETag') || uploadResponse.headers.get('etag');
+        if (!etag) throw new Error('Storage did not expose the multipart ETag');
+        parts.push({part_number: partNumber, etag});
+        setProgress((Math.min(start + session.part_size, file.size) / file.size) * 100, `${message('uploading', 'Uploading ...')} ${partNumber}/${session.total_parts}`);
+      }
+      const completeResponse = await fetch(config.directCompleteUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({upload_id: session.upload_id, parts})});
+      const result = await completeResponse.json().catch(() => ({}));
+      if (!completeResponse.ok || result.status !== 'success') throw new Error(result.message || 'Multipart completion failed');
+      return result;
     } catch (error) {
-        console.error('Error:', error);
-        alert(`Error: ${error.message}`);
-        throw error;
+      if (config.directAbortUrl) fetch(config.directAbortUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({upload_id: session.upload_id})}).catch(() => {});
+      error.directUploadRecoverable = true;
+      throw error;
     }
-}
+  }
 
-
-// Event listener
-document.getElementById('btn_upload_dataset').addEventListener('click', async function() {
+  async function uploadSanitizedFile() {
+    if (state.uploading || state.uploadComplete) return;
+    if (!state.anonymizedRows.length) throw new Error(message('deidentificationRequired', 'Run the de-identification preview before uploading.'));
+    state.uploading = true;
+    const button = $('btn_upload_dataset'); if (button) button.disabled = true;
     try {
-        await checkTempMetaData(anonymized_data);
+      const file = csvFileFromRows();
+      await createBatch(file);
+      let result;
+      if (config.directUploadEnabled) {
+        try { result = await uploadDirect(file); } catch (error) { if (!config.directUploadFallback || !error.directUploadRecoverable) throw error; result = await uploadChunked(file); }
+      } else result = await uploadChunked(file);
+      state.uploadComplete = true;
+      setProgress(100, message('uploadComplete', 'Sanitized dataset uploaded successfully.'));
+      if (config.updateBatchUrl) {
+        const response = await fetch(config.updateBatchUrl, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrfToken()}, body: JSON.stringify({batch_id: state.batchId, dataset_recordsNum: String(state.anonymizedRows.length), dataset_price: $('dataset_price')?.value || '0', dataset_requestRequired: $('dataset_requestRequired')?.value || 'No'})});
+        if (!response.ok) throw new Error(message('uploadFailed', 'Could not save access settings.'));
+      }
+      if (state.datasetId && config.datasetDetailUrl) window.location.href = config.datasetDetailUrl.replace('__DATASET_ID__', state.datasetId);
+      return result;
     } catch (error) {
-        console.error('Upload error:', error);
+      setProgress(0, `${message('uploadFailed', 'Upload failed.')} ${error.message}`, true);
+      if (button) button.disabled = false;
+      throw error;
+    } finally {
+      state.uploading = false;
     }
-});
+  }
 
-function convertJsonToCsv(jsonData) {
-    if (!jsonData || jsonData.length === 0) {
-        return '';
+  function validateStep(step) {
+    if (step === 1) {
+      const required = ['dataset_name', 'dataset_owner', 'dataset_language', 'dataset_format'];
+      const missing = required.find(id => !$(id)?.value || (id === 'dataset_language' && !Array.from($(id).selectedOptions).length));
+      if (missing) { $(missing)?.focus(); return false; }
     }
+    if (step === 2 && !state.sourceRows.length) { alert(message('chooseFile', 'Choose a valid CSV or Excel file first.')); return false; }
+    if (step === 3) {
+      collectPolicies();
+      const unprotected = state.policies.filter(policy => likelyIdentifier(policy.name) && policy.di_type === 'None');
+      if (unprotected.length) { alert(`${message('privacyWarning', 'Sensitive columns need a privacy action')}: ${unprotected.map(policy => policy.name).join(', ')}`); return false; }
+    }
+    if ((step === 4 || step === 5) && !state.anonymizedRows.length) { alert(message('deidentificationRequired', 'Run the de-identification preview before continuing.')); return false; }
+    if (step === 6 && !$('question_verify')?.checked) { alert(message('verify', 'Please confirm your consent.')); return false; }
+    return true;
+  }
+  window.DataHubWorkflowValidateStep = validateStep;
 
-    let csvContent = Papa.unparse(jsonData);
-    const csvBlob = new Blob([csvContent], { type: 'text/csv' });
-    const newFilename = 'di_' + uploaded_file_name;
-    csv_file = new File([csvBlob], newFilename, { type: 'text/csv' });
-    return csv_file;
-}
+  function initialize() {
+    loadTags();
+    $('my_file1')?.addEventListener('change', async event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try { await parseFile(file); }
+      catch (error) { state.sourceRows = []; state.columns = []; state.policies = []; if ($('tb_container')) $('tb_container').textContent = error.message; if ($('source-profile')) $('source-profile').textContent = message('profileFailed', 'Could not profile this file.'); }
+    });
+    $('btn_upload_dataset')?.addEventListener('click', () => uploadSanitizedFile().catch(error => alert(error.message)));
+    $('div_container')?.addEventListener('change', event => { if (event.target.matches('[data-role="col-dtype"]')) collectPolicies(); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize, {once: true});
+  else initialize();
+})();

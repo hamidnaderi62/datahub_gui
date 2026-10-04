@@ -1,39 +1,141 @@
-version: '3.8'
 
 services:
   db:
-    image: postgres:latest
+    image: postgres:16-alpine
     environment:
-      POSTGRES_USER: green_hub
-      POSTGRES_PASSWORD: M@sterhub@2151
-      POSTGRES_DB: datahub
+      POSTGRES_USER: ${DATABASE_USER:-datahub}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      POSTGRES_DB: ${DATABASE_NAME:-datahub}
     volumes:
       - datahub-data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - datahub-network
+
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - datahub-redis:/data
     networks:
       - datahub-network
 
   api:
-    build: https://github.com/hamidnaderi62/datahub_api.git#main
+    build:
+      context: ../datahub_api
+      dockerfile: Dockerfile
     environment:
       DJANGO_SETTINGS_MODULE: datahub_api.settings
+      SECRET_KEY: ${API_SECRET_KEY:-${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY must be set}}
+      DEBUG: ${DJANGO_DEBUG:-false}
+      ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+      DATABASE_ENGINE: ${DATABASE_ENGINE:-django.db.backends.postgresql}
+      DATABASE_NAME: ${DATABASE_NAME:-datahub}
+      DATABASE_USER: ${DATABASE_USER:-datahub}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_VERIFY_SSL: ${S3_VERIFY_SSL:-true}
+      IMPORT_QUARANTINE_BUCKET: ${IMPORT_QUARANTINE_BUCKET:-datahub-quarantine}
+      IMPORT_MAX_FILES: ${IMPORT_MAX_FILES:-20}
+      IMPORT_MAX_BYTES: ${IMPORT_MAX_BYTES:-10737418240}
+      GUI_IMPORT_HMAC_SECRET: ${EXTERNAL_IMPORT_HMAC_SECRET:-}
+      GUI_IMPORT_URL: http://gui:8000/dataset/api/v1/external-imports
+      KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
+      KAGGLE_KEY: ${KAGGLE_KEY:-}
     ports:
       - "8001:8001"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - datahub-network
 
   gui:
-    build: https://github.com/hamidnaderi62/datahub_gui.git#main
+    build: .
     environment:
       DJANGO_SETTINGS_MODULE: datahub_gui.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY must be set}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${DJANGO_CSRF_TRUSTED_ORIGINS:-}
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-false}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-no-reply@datahub.local}
+      DATABASE_NAME: ${DATABASE_NAME:-datahub}
+      DATABASE_USER: ${DATABASE_USER:-datahub}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT must be set}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      PIPELINE_AUTO_DISPATCH: ${PIPELINE_AUTO_DISPATCH:-true}
+      PIPELINE_ANTIVIRUS_MODE: ${PIPELINE_ANTIVIRUS_MODE:-disabled}
+      PIPELINE_ANTIVIRUS_TIMEOUT_SECONDS: ${PIPELINE_ANTIVIRUS_TIMEOUT_SECONDS:-300}
+      PIPELINE_STRICT_FILE_TYPES: ${PIPELINE_STRICT_FILE_TYPES:-false}
+      DIRECT_S3_UPLOADS: ${DIRECT_S3_UPLOADS:-true}
+      DIRECT_S3_UPLOAD_FALLBACK: ${DIRECT_S3_UPLOAD_FALLBACK:-true}
+      EXTERNAL_IMPORT_HMAC_SECRET: ${EXTERNAL_IMPORT_HMAC_SECRET:-}
+      EXTERNAL_IMPORT_BUCKETS: ${EXTERNAL_IMPORT_BUCKETS:-}
     ports:
       - "8000:8000"
     depends_on:
+      db:
+        condition: service_healthy
+      api:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - datahub-network
+
+  worker:
+    build: .
+    command: celery -A datahub_gui.celery:app worker --loglevel=INFO --concurrency=${PIPELINE_WORKER_CONCURRENCY:-2} -Q pipeline
+    environment:
+      DJANGO_SETTINGS_MODULE: datahub_gui.settings
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY must be set}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-false}
+      DATABASE_NAME: ${DATABASE_NAME:-datahub}
+      DATABASE_USER: ${DATABASE_USER:-datahub}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      S3_ENDPOINT: ${S3_ENDPOINT:?S3_ENDPOINT must be set}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?S3_ACCESS_KEY must be set}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?S3_SECRET_KEY must be set}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      PIPELINE_AUTO_DISPATCH: ${PIPELINE_AUTO_DISPATCH:-true}
+      PIPELINE_ANTIVIRUS_MODE: ${PIPELINE_ANTIVIRUS_MODE:-disabled}
+      PIPELINE_ANTIVIRUS_TIMEOUT_SECONDS: ${PIPELINE_ANTIVIRUS_TIMEOUT_SECONDS:-300}
+      PIPELINE_STRICT_FILE_TYPES: ${PIPELINE_STRICT_FILE_TYPES:-false}
+      DIRECT_S3_UPLOADS: ${DIRECT_S3_UPLOADS:-true}
+      DIRECT_S3_UPLOAD_FALLBACK: ${DIRECT_S3_UPLOAD_FALLBACK:-true}
+    depends_on:
       - db
-      - api
+      - redis
     networks:
       - datahub-network
 
@@ -43,3 +145,4 @@ networks:
 
 volumes:
   datahub-data:
+  datahub-redis:

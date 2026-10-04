@@ -1,5 +1,10 @@
-from django import template
+from datetime import date, datetime
 import os
+
+from django import template
+from django.utils.timezone import is_aware, localtime
+from django.utils.translation import get_language
+
 register = template.Library()
 
 
@@ -16,13 +21,73 @@ def split_by(value, delimiter):
 
 from persiantools.jdatetime import JalaliDate
 from django.utils.timezone import now
+
+
+_ARABIC_MONTHS = {
+    1: 'يناير',
+    2: 'فبراير',
+    3: 'مارس',
+    4: 'أبريل',
+    5: 'مايو',
+    6: 'يونيو',
+    7: 'يوليو',
+    8: 'أغسطس',
+    9: 'سبتمبر',
+    10: 'أكتوبر',
+    11: 'نوفمبر',
+    12: 'ديسمبر',
+}
+_ARABIC_DIGITS = str.maketrans('0123456789', '٠١٢٣٤٥٦٧٨٩')
+
+
+def _language_code(language=None):
+    return (language or get_language() or 'fa').split('-')[0].lower()
+
+
+def _gregorian_datetime(value):
+    """Return a datetime in the active timezone for Gregorian formatting."""
+    if isinstance(value, datetime):
+        return localtime(value) if is_aware(value) else value
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day)
+    return None
+
+
+@register.filter
+def localized_date(value, language=None):
+    """Format a date using the selected UI language and calendar.
+
+    Persian uses the Solar Hijri calendar, while English and Arabic use the
+    Gregorian calendar. Arabic output uses Arabic month names and numerals.
+    """
+    if not value:
+        return ''
+
+    language = _language_code(language)
+    try:
+        if language == 'fa':
+            return JalaliDate(value, locale='fa').strftime('%Y/%m/%d')
+
+        current = _gregorian_datetime(value)
+        if current is None:
+            return ''
+        if language == 'ar':
+            formatted = f'{current.day:02d} {_ARABIC_MONTHS[current.month]} {current.year}'
+            return formatted.translate(_ARABIC_DIGITS)
+        return f'{current.strftime("%b")} {current.day}, {current.year}'
+    except (TypeError, ValueError, OverflowError):
+        return ''
+
+
 @register.filter
 def to_jalali(value):
     return JalaliDate(value, locale="fa")
 
 @register.filter
 def to_jalali_s(value):
-    return JalaliDate(value, locale="fa").strftime("%Y/%m/%d")
+    # Keep the legacy filter name for existing templates while making its
+    # output follow the selected language.
+    return localized_date(value)
 @register.filter
 def to_jalali_c(value):
     return JalaliDate(value, locale="fa").strftime('%c')

@@ -9,6 +9,8 @@ class HomePageTests(TestCase):
             response = self.client.get(reverse('home:home'))
 
             self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'دنیای بدون مرز داده‌ها')
+            self.assertContains(response, 'مخزن ذخیره‌سازی، مبادله و اشتراک‌گذاری داده‌ها ویژه کاربران حوزه هوش مصنوعی')
             self.assertContains(response, 'dh-workflow')
             self.assertContains(response, 'از فایل خام تا دیتاست قابل اعتماد')
             self.assertContains(response, '#landingWorkflow')

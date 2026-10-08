@@ -1,470 +1,86 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block body_class %}home-page{% endblock %}
 
 {% block content %}
- <!-- Sections:Start -->
-<div class="scrollspy-example" data-bs-spy="scroll">
-
-    <!-- Hero: Start -->
-    <section id="hero-animation">
-        <div class="section-py landing-hero position-relative" id="landingHero">
-            <div class="container">
-                <div class="hero-text-box text-center">
-                    <h1 class="text-primary hero-title display-6 fw-bold ">
-                        دنیای بدون مرز داده ها
-                    </h1>
-                    <h2 class="hero-sub-title h6 mb-4 mt-2 pb-1 lh-2">
-                       مخزن ذخیره سازی، مبادله و اشتراک گذاری داده ها
-                        <br class="d-none d-lg-block"/>
-                        ویژه کاربران حوزه هوش مصنوعی
-                    </h2>
-                    <div class="landing-hero-btn d-inline-block position-relative">
-                        <span class="hero-btn-item position-absolute d-none d-md-flex text-heading">
-                            فرصت استثناییءء
-                            <img alt="پیکان انجمن" class="scaleX-n1-rtl" src="{% static 'img/front-pages/icons/Join-community-arrow.png' %}"/>
-                        </span>
-                        {% if request.user.is_authenticated %}
-                             <a class="btn btn-primary btn-lg" href="{% url 'dataset:dataset_list' %}"> به دنیای ما بپیوندید</a>
-                        {% else %}
-                             <a class="btn btn-primary btn-lg" href="{% url 'account:login' %}"> به دنیای ما بپیوندید</a>
-                        {% endif %}
-
-
-
-                    </div>
-                </div>
-                <div class="hero-animation-img" id="heroDashboardAnimation">
-                    <a href="../vertical-menu-template/app-ecommerce-dashboard.html" target="_blank">
-                        <div class="position-relative hero-dashboard-img" id="heroAnimationImg">
-                            <img alt="داشبورد قهرمان" class="animation-img"  src="{% static 'img/front-pages/landing-page/hero-dashboard-light.png' %}"/>
-                            <img alt="عناصر قهرمان" class="position-absolute hero-elements-img animation-img top-0 start-0"  src="{% static 'img/front-pages/landing-page/hero-elements-light.png' %}"/>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-        <div class="landing-hero-blank"></div>
-    </section>
-    <!-- Hero: End -->
-
-    <!-- Useful features: Start -->
-    <section class="section-py landing-features" id="landingFeatures">
-        <div class="container">
-            <div class="text-center mb-3 pb-1">
-                <span class="badge bg-label-primary"></span>
-            </div>
-            <h3 class="text-center mb-2 fw-medium">
-                <span class="section-title">ویژگی های دیتاهاب</span>
-            </h3>
-            <p class="text-center mb-3 mb-md-5 pb-3"> </p>
-            <div class="features-icon-wrapper row gx-0 gy-4 g-sm-5">
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="شارژ لپ تاپ" src="{% static 'img/front-pages/icons/laptop.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">دسترسی به مخزن داده</h5>
-                    <p class="features-icon-description"> دسترسی به دیتاست های مختلف از مراجع و هاب های داده بین المللی بدون واسطه</p>
-                </div>
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="انتقال به بالا" src="{% static 'img/front-pages/icons/rocket.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">تعریف دیتاست های شخصی</h5>
-                    <p class="features-icon-description">امکان تعریف، بارگذاری و اشتراک گذاری دیتاست های شخصی بروی پلتفرم</p>
-                </div>
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="ویرایش کنید" src="{% static 'img/front-pages/icons/paper.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">مبادله داده</h5>
-                    <p class="features-icon-description">قابلیت ارزش گذاری، مبادله و خرید و فروش دیتاست ها در Dataset Marketplace </p>
-                </div>
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="پرونده های گوگل" src="{% static 'img/front-pages/icons/keyboard.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">پیش پردازش</h5>
-                    <p class="features-icon-description">امکان پیش پردازش دیتاست ها و ذخیره سازی بهینه دیتا</p>
-                </div>
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="جامد را سه بعدی انتخاب کنید" src="{% static 'img/front-pages/icons/check.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">ارائه API</h5>
-                    <p class="features-icon-description">ارائه سرویس داده به توسعه دهندگان در قالب API</p>
-                </div>
-                <div class="col-lg-4 col-sm-6 text-center features-icon-box">
-                    <div class="text-center mb-3">
-                        <img alt="کمربند نجات" src="{% static 'img/front-pages/icons/user.png' %}"/>
-                    </div>
-                    <h5 class="mb-2">یکپارچه سازی</h5>
-                    <p class="features-icon-description">امکان یکپارچه سازی با سرویس های ذخیره ابری و پردازش گرافیکی </p>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Useful features: End -->
-
-    <!-- Real customers reviews: Start -->
-    <section class="section-py bg-body landing-reviews pb-0" id="landingReviews">
-        <!-- What people say slider: Start -->
-        <div class="container">
-            <div class="row align-items-center gx-0 gy-4 g-lg-5">
-                <div class="col-md-6 col-lg-5 col-xl-3">
-                    <div class="mb-3 pb-1">
-                        <span class="badge bg-label-primary">نظرات مشتریان</span>
-                    </div>
-                    <h3 class="mb-2">
-                        <span class="section-title">آنچه کاربران می‌گویند!</span>
-                    </h3>
-                    <p class="mb-3 mb-md-5">
-                        <br class="d-none d-xl-block"/>
-
-                    </p>
-                    <div class="landing-reviews-btns">
-                        <button class="btn btn-label-primary reviews-btn me-3 scaleX-n1-rtl" id="reviews-previous-btn" type="button">
-                            <i class="ti ti-chevron-left ti-sm"></i>
-                        </button>
-                        <button class="btn btn-label-primary reviews-btn scaleX-n1-rtl" id="reviews-next-btn" type="button">
-                            <i class="ti ti-chevron-right ti-sm"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="col-md-6 col-lg-7 col-xl-9">
-                    <div class="swiper-reviews-carousel overflow-hidden mb-5 pb-md-2 pb-md-3">
-                        <div class="swiper" id="swiper-reviews">
-                            <div class="swiper-wrapper">
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-1.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">حمیدرضا زمانی</h6>
-                                                    <p class="small text-muted mb-0">مدیرعامل Airbnb</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-2.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/2.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">ترلان پروانه</h6>
-                                                    <p class="small text-muted mb-0">بنیانگذار Hubspot</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-3.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/3.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">بهروز وثوقی</h6>
-                                                    <p class="small text-muted mb-0">رهبر طراحی در Dribbble</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-4.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/4.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">بهاره کیان‌افشار</h6>
-                                                    <p class="small text-muted mb-0">بنیانگذار همراه‌اول</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-5.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/5.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">حمید فرخ نژاد</h6>
-                                                    <p class="small text-muted mb-0">بنیانگذار Hubspot</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="swiper-slide">
-                                    <div class="card h-100">
-                                        <div class="card-body text-body d-flex flex-column justify-content-between h-100">
-                                            <div class="mb-3">
-                                                <img alt="لوگوی مشتری" class="client-logo img-fluid" src="{% static 'img/front-pages/branding/logo-6.png' %}"/>
-                                            </div>
-                                            <p class="justify-text"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است</p>
-                                            <div class="text-warning mb-3">
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star-filled ti-sm"></i>
-                                                <i class="ti ti-star ti-sm"></i>
-                                            </div>
-                                            <div class="d-flex align-items-center">
-                                                <div class="avatar me-2 avatar-sm">
-                                                    <img alt="آواتار" class="rounded-circle" src="{% static 'img/avatars/1.png' %}"/>
-                                                </div>
-                                                <div>
-                                                    <h6 class="mb-0">مهدی پاکدل</h6>
-                                                    <p class="small text-muted mb-0">بنیانگذار ایرانسل</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="swiper-button-next"></div>
-                            <div class="swiper-button-prev"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- What people say slider: End -->
-        <hr class="m-0"/>
-        <!-- Logo slider: Start -->
-        <div class="container">
-            <div class="swiper-logo-carousel py-4 my-lg-2">
-                <div class="swiper" id="swiper-clients-logos">
-                    <div class="swiper-wrapper">
-                        <div class="swiper-slide">
-                            <img alt="لوگوی مشتری" class="client-logo" data-app-dark-img="front-pages/branding/logo_1-dark.png" data-app-light-img="front-pages/branding/logo_1-light.png" src="{% static 'img/front-pages/branding/logo_1-light.png' %}"/>
-                        </div>
-                        <div class="swiper-slide">
-                            <img alt="لوگوی مشتری" class="client-logo" data-app-dark-img="front-pages/branding/logo_2-dark.png" data-app-light-img="front-pages/branding/logo_2-light.png" src="{% static 'img/front-pages/branding/logo_2-light.png' %}"/>
-                        </div>
-                        <div class="swiper-slide">
-                            <img alt="لوگوی مشتری" class="client-logo" data-app-dark-img="front-pages/branding/logo_3-dark.png" data-app-light-img="front-pages/branding/logo_3-light.png" src="{% static 'img/front-pages/branding/logo_3-light.png' %}"/>
-                        </div>
-                        <div class="swiper-slide">
-                            <img alt="لوگوی مشتری" class="client-logo" data-app-dark-img="front-pages/branding/logo_4-dark.png" data-app-light-img="front-pages/branding/logo_4-light.png" src="{% static 'img/front-pages/branding/logo_4-light.png' %}"/>
-                        </div>
-                        <div class="swiper-slide">
-                            <img alt="لوگوی مشتری" class="client-logo" data-app-dark-img="front-pages/branding/logo_5-dark.png" data-app-light-img="front-pages/branding/logo_5-light.png" src="{% static 'img/front-pages/branding/logo_5-light.png' %}"/>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Logo slider: End -->
-    </section>
-    <!-- Real customers reviews: End -->
-
-
-    <!-- Fun facts: Start -->
-    <section class="section-py landing-fun-facts" id="landingFunFacts">
-        <div class="container">
-            <div class="row gy-3">
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card border border-label-primary shadow-none">
-                        <div class="card-body text-center">
-                            <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/laptop.png' %}"/>
-                            <h5 class="h2 mb-1">{{ dataset_count }}</h5>
-                            <p class="fw-medium mb-0">دیتاست موجود
-                                <br/>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card border border-label-success shadow-none">
-                        <div class="card-body text-center">
-                            <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/user-success.png' %}"/>
-                            <h5 class="h2 mb-1">{{ user_count }}</h5>
-                            <p class="fw-medium mb-0"> کاربر فعال
-                                <br/>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card border border-label-warning shadow-none">
-                        <div class="card-body text-center">
-                            <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/check-warning.png' %}"/>
-                            <h5 class="h2 mb-1">{{ request_count }}</h5>
-                            <p class="fw-medium mb-0">مبادله انجام شده
-                                <br/>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card border border-label-info shadow-none">
-                        <div class="card-body text-center">
-                            <img alt="لپ تاپ" class="mb-2" src="{% static 'img/front-pages/icons/diamond-info.png' %}"/>
-                            <h5 class="h2 mb-1">4.8/5</h5>
-                            <p class="fw-medium mb-0">میانگین رضایت
-                                <br/>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    <!-- Fun facts: End -->
-
-    <!-- FAQ: Start -->
-    <section class="section-py bg-body landing-faq" id="landingFAQ">
-        <div class="container">
-            <div class="text-center mb-3 pb-1">
-                <span class="badge bg-label-primary">سوالات</span>
-            </div>
-            <h3 class="text-center mb-3">
-                <span class="section-title">سوالات پرتکرار</span>
-                کاربران ما
-            </h3>
-            <p class="text-center mb-5 pb-3">برای یافتن پاسخ سوالات خود، آیتم های زیر را بررسی کنید.</p>
-            <div class="row gy-5">
-                <div class="col-lg-5">
-                    <div class="text-center">
-                        <img alt="" class="faq-image" src="{% static 'img/front-pages/landing-page/faq-boy-with-logos.png' %}"/>
-                    </div>
-                </div>
+<main class="dh-home" dir="{% if current_language == 'fa' or current_language == 'ar' %}rtl{% else %}ltr{% endif %}">
+    <section class="dh-hero" id="landingHero">
+        <div class="container position-relative">
+            <div class="row align-items-center g-5">
                 <div class="col-lg-7">
-                    <div class="accordion" id="accordionExample">
-                        <div class="card accordion-item active">
-                            <h2 class="accordion-header" id="headingOne">
-                                <button aria-controls="accordionOne" aria-expanded="true" class="accordion-button" data-bs-target="#accordionOne" data-bs-toggle="collapse" type="button">
-                                    آیا لورم ایپسوم یک متن ساختگی نامفهوم است ؟
-                                </button>
-                            </h2>
-                            <div class="accordion-collapse collapse show" data-bs-parent="#accordionExample" id="accordionOne">
-                                <div class="accordion-body"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است.</div>
-                            </div>
+                    <span class="dh-eyebrow"><i class="ti ti-sparkles me-1"></i>{{ ui.home_eyebrow }}</span>
+                    <h1 class="dh-hero-title">{{ ui.home_title }}</h1>
+                    <p class="dh-hero-copy">{{ ui.home_intro }}</p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a class="btn btn-primary btn-lg" href="{% url 'dataset:dataset_list' %}"><i class="ti ti-database-search me-2"></i>{{ ui.home_primary }}</a>
+                        {% if request.user.is_authenticated %}
+                            <a class="btn btn-label-primary btn-lg" href="{% url 'dataset:dataset_new_stepper' %}"><i class="ti ti-upload me-2"></i>{{ ui.home_secondary }}</a>
+                        {% else %}
+                            <a class="btn btn-label-primary btn-lg" href="{% url 'account:login' %}"><i class="ti ti-upload me-2"></i>{{ ui.home_secondary }}</a>
+                        {% endif %}
+                    </div>
+                    <div class="dh-hero-proof"><span><i class="ti ti-shield-check"></i>{{ ui.home_trust }}</span><span><i class="ti ti-check"></i>{{ ui.quality_report }}</span><span><i class="ti ti-world"></i>{{ ui.datasets }}</span></div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="dh-hero-panel">
+                        <div class="dh-panel-top"><span class="dh-panel-dot"></span><span class="dh-panel-dot"></span><span class="dh-panel-dot"></span><span class="dh-panel-label">DataHub workspace</span></div>
+                        <div class="dh-panel-heading"><div><small>{{ ui.home_trust }}</small><h2>{{ ui.datasets }}</h2></div><span class="dh-panel-icon"><i class="ti ti-database"></i></span></div>
+                        <div class="dh-panel-metrics">
+                            <div><strong>{{ dataset_count|default:0 }}</strong><span>{{ ui.dataset_count }}</span></div>
+                            <div><strong>{{ user_count|default:0 }}</strong><span>{{ ui.user_count }}</span></div>
+                            <div><strong>{{ request_count|default:0 }}</strong><span>{{ ui.request_count }}</span></div>
                         </div>
-                        <div class="card accordion-item">
-                            <h2 class="accordion-header" id="headingTwo">
-
-                                <button aria-controls="accordionTwo" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#accordionTwo" data-bs-toggle="collapse" type="button">
-                                    آیا لورم ایپسوم یک متن ساختگی نامفهوم است ؟
-                                </button>
-                            </h2>
-                            <div aria-labelledby="headingTwo" class="accordion-collapse collapse" data-bs-parent="#accordionExample" id="accordionTwo">
-                                <div class="accordion-body"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است.</div>
-                            </div>
-                        </div>
-                        <div class="card accordion-item">
-                            <h2 class="accordion-header" id="headingThree">
-                                <button aria-controls="accordionThree" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#accordionThree" data-bs-toggle="collapse" type="button">
-                                    آیا لورم ایپسوم یک متن ساختگی نامفهوم است ؟
-                                </button>
-                            </h2>
-                            <div aria-labelledby="headingThree" class="accordion-collapse collapse" data-bs-parent="#accordionExample" id="accordionThree">
-                                <div class="accordion-body"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است.</div>
-                            </div>
-                        </div>
-                        <div class="card accordion-item">
-                            <h2 class="accordion-header" id="headingFour">
-                                <button aria-controls="accordionFour" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#accordionFour" data-bs-toggle="collapse" type="button">
-                                    آیا لورم ایپسوم یک متن ساختگی نامفهوم است ؟
-                                </button>
-                            </h2>
-                            <div aria-labelledby="headingFour" class="accordion-collapse collapse" data-bs-parent="#accordionExample" id="accordionFour">
-                                <div class="accordion-body"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است.</div>
-                            </div>
-                        </div>
-                        <div class="card accordion-item">
-                            <h2 class="accordion-header" id="headingFive">
-                                <button aria-controls="accordionFive" aria-expanded="false" class="accordion-button collapsed" data-bs-target="#accordionFive" data-bs-toggle="collapse" type="button">
-                                    آیا لورم ایپسوم یک متن ساختگی نامفهوم است ؟
-                                </button>
-                            </h2>
-                            <div aria-labelledby="headingFive" class="accordion-collapse collapse" data-bs-parent="#accordionExample" id="accordionFive">
-                                <div class="accordion-body"> لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ و با استفاده از طراحان گرافیک است چاپگرها و متون بلکه روزنامه و مجله در ستون و سطرآنچنان که لازم است.</div>
-                            </div>
-                        </div>
+                        <div class="dh-panel-list"><div><span class="dh-status-dot success"></span><span>{{ ui.home_step_3 }}</span><strong><i class="ti ti-check"></i></strong></div><div><span class="dh-status-dot warning"></span><span>{{ ui.home_step_4 }}</span><strong><i class="ti ti-arrow-up-right"></i></strong></div></div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
-    <!-- FAQ: End -->
 
+    <section class="dh-stats" aria-label="{{ ui.home_trust }}">
+        <div class="container"><div class="row g-3">
+            <div class="col-sm-4"><div class="dh-stat"><span class="dh-stat-icon purple"><i class="ti ti-database"></i></span><div><strong>{{ dataset_count|default:0 }}</strong><span>{{ ui.dataset_count }}</span></div></div></div>
+            <div class="col-sm-4"><div class="dh-stat"><span class="dh-stat-icon green"><i class="ti ti-users"></i></span><div><strong>{{ user_count|default:0 }}</strong><span>{{ ui.user_count }}</span></div></div></div>
+            <div class="col-sm-4"><div class="dh-stat"><span class="dh-stat-icon orange"><i class="ti ti-arrows-exchange"></i></span><div><strong>{{ request_count|default:0 }}</strong><span>{{ ui.request_count }}</span></div></div></div>
+        </div></div>
+    </section>
 
+    <section class="dh-section dh-workflow" id="landingWorkflow">
+        <div class="container">
+            <div class="dh-section-heading"><span class="dh-eyebrow">{{ ui.home_workflow_eyebrow }}</span><h2>{{ ui.home_workflow_title }}</h2><p>{{ ui.home_workflow_intro }}</p></div>
+            <div class="row g-4">
+                <div class="col-md-6 col-xl-3"><article class="dh-step"><span class="dh-step-number">01</span><span class="dh-card-icon purple"><i class="ti ti-search"></i></span><h3>{{ ui.home_step_1 }}</h3><p>{{ ui.home_step_1_text }}</p></article></div>
+                <div class="col-md-6 col-xl-3"><article class="dh-step"><span class="dh-step-number">02</span><span class="dh-card-icon blue"><i class="ti ti-adjustments-horizontal"></i></span><h3>{{ ui.home_step_2 }}</h3><p>{{ ui.home_step_2_text }}</p></article></div>
+                <div class="col-md-6 col-xl-3"><article class="dh-step"><span class="dh-step-number">03</span><span class="dh-card-icon orange"><i class="ti ti-shield-check"></i></span><h3>{{ ui.home_step_3 }}</h3><p>{{ ui.home_step_3_text }}</p></article></div>
+                <div class="col-md-6 col-xl-3"><article class="dh-step"><span class="dh-step-number">04</span><span class="dh-card-icon green"><i class="ti ti-world-share"></i></span><h3>{{ ui.home_step_4 }}</h3><p>{{ ui.home_step_4_text }}</p></article></div>
+            </div>
+        </div>
+    </section>
 
-</div>
-<!-- / Sections:End -->
+    <section class="dh-section dh-capabilities">
+        <div class="container">
+            <div class="dh-section-heading"><span class="dh-eyebrow">{{ ui.home_capabilities_eyebrow }}</span><h2>{{ ui.home_capabilities_title }}</h2><p>{{ ui.home_capabilities_intro }}</p></div>
+            <div class="row g-4">
+                <div class="col-lg-4"><article class="dh-feature-card"><div class="dh-feature-visual purple"><i class="ti ti-database-search"></i></div><h3>{{ ui.home_capability_discover }}</h3><p>{{ ui.home_capability_discover_text }}</p><a href="{% url 'dataset:dataset_list' %}" class="dh-text-link">{{ ui.home_primary }} <i class="ti ti-arrow-up-right"></i></a></article></div>
+                <div class="col-lg-4"><article class="dh-feature-card"><div class="dh-feature-visual blue"><i class="ti ti-lock-access"></i></div><h3>{{ ui.home_capability_prepare }}</h3><p>{{ ui.home_capability_prepare_text }}</p><a href="{% url 'dataset:dataset_new_stepper' %}" class="dh-text-link">{{ ui.home_secondary }} <i class="ti ti-arrow-up-right"></i></a></article></div>
+                <div class="col-lg-4"><article class="dh-feature-card"><div class="dh-feature-visual orange"><i class="ti ti-shopping-cart-share"></i></div><h3>{{ ui.home_capability_exchange }}</h3><p>{{ ui.home_capability_exchange_text }}</p><a href="{% url 'dataset:dataset_list' %}" class="dh-text-link">{{ ui.home_primary }} <i class="ti ti-arrow-up-right"></i></a></article></div>
+            </div>
+        </div>
+    </section>
 
-  </div>
+    <section class="dh-integrations" id="landingIntegrations">
+        <div class="container"><div class="row align-items-center g-4"><div class="col-lg-7"><span class="dh-eyebrow">{{ ui.home_integrations_title }}</span><h2>{{ ui.home_integrations_title }}</h2><p>{{ ui.home_integrations_text }}</p></div><div class="col-lg-5"><div class="dh-source-list"><div><span class="dh-source-logo hf">🤗</span><span>Hugging Face</span><i class="ti ti-check"></i></div><div><span class="dh-source-logo kg">K</span><span>Kaggle</span><i class="ti ti-check"></i></div><div><span class="dh-source-logo dh">D</span><span>DataHub catalog</span><i class="ti ti-check"></i></div></div></div></div></div>
+    </section>
 
+    <section class="dh-section dh-privacy">
+        <div class="container"><div class="dh-privacy-panel"><div class="row align-items-center g-4"><div class="col-lg-8"><span class="dh-eyebrow">{{ ui.workflow_anonymization }}</span><h2>{{ ui.home_privacy_title }}</h2><p>{{ ui.home_privacy_text }}</p></div><div class="col-lg-4 text-lg-end"><a class="btn btn-light btn-lg" href="{% url 'dataset:dataset_new_stepper' %}">{{ ui.home_privacy_action }} <i class="ti ti-arrow-up-right ms-1"></i></a></div></div></div></div>
+    </section>
+
+    <section class="dh-section dh-faq bg-body" id="landingFAQ">
+        <div class="container"><div class="dh-section-heading"><span class="dh-eyebrow">{{ ui.home_faq_eyebrow }}</span><h2>{{ ui.home_faq_title }}</h2><p>{{ ui.home_faq_intro }}</p></div><div class="row justify-content-center"><div class="col-lg-9"><div class="accordion dh-accordion" id="homeFaq"><div class="accordion-item"><h3 class="accordion-header" id="homeFaqHeadingOne"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#homeFaqOne" aria-expanded="true" aria-controls="homeFaqOne">{{ ui.home_faq_q1 }}</button></h3><div id="homeFaqOne" class="accordion-collapse collapse show" aria-labelledby="homeFaqHeadingOne" data-bs-parent="#homeFaq"><div class="accordion-body">{{ ui.home_faq_a1 }}</div></div></div><div class="accordion-item"><h3 class="accordion-header" id="homeFaqHeadingTwo"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#homeFaqTwo" aria-expanded="false" aria-controls="homeFaqTwo">{{ ui.home_faq_q2 }}</button></h3><div id="homeFaqTwo" class="accordion-collapse collapse" aria-labelledby="homeFaqHeadingTwo" data-bs-parent="#homeFaq"><div class="accordion-body">{{ ui.home_faq_a2 }}</div></div></div><div class="accordion-item"><h3 class="accordion-header" id="homeFaqHeadingThree"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#homeFaqThree" aria-expanded="false" aria-controls="homeFaqThree">{{ ui.home_faq_q3 }}</button></h3><div id="homeFaqThree" class="accordion-collapse collapse" aria-labelledby="homeFaqHeadingThree" data-bs-parent="#homeFaq"><div class="accordion-body">{{ ui.home_faq_a3 }}</div></div></div><div class="accordion-item"><h3 class="accordion-header" id="homeFaqHeadingFour"><button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#homeFaqFour" aria-expanded="false" aria-controls="homeFaqFour">{{ ui.home_faq_q4 }}</button></h3><div id="homeFaqFour" class="accordion-collapse collapse" aria-labelledby="homeFaqHeadingFour" data-bs-parent="#homeFaq"><div class="accordion-body">{{ ui.home_faq_a4 }}</div></div></div></div></div></div></div>
+    </section>
+
+    <section class="dh-cta" id="landingStart"><div class="container"><div class="dh-cta-panel"><div><span class="dh-eyebrow">DataHub</span><h2>{{ ui.home_cta_title }}</h2><p>{{ ui.home_cta_text }}</p></div><a class="btn btn-primary btn-lg" href="{% url 'dataset:dataset_list' %}">{{ ui.home_cta_action }} <i class="ti ti-arrow-up-right ms-1"></i></a></div></div></section>
+</main>
 {% endblock %}

@@ -64,6 +64,10 @@ DIRECT_S3_UPLOADS = env_bool('DIRECT_S3_UPLOADS', True)
 DIRECT_S3_UPLOAD_FALLBACK = env_bool('DIRECT_S3_UPLOAD_FALLBACK', True)
 PAYMENT_WEBHOOK_SECRET = os.environ.get('PAYMENT_WEBHOOK_SECRET', '')
 EXTERNAL_IMPORT_HMAC_SECRET = os.environ.get('EXTERNAL_IMPORT_HMAC_SECRET', '')
+DATAHUB_API_IMPORT_URL = os.environ.get(
+    'DATAHUB_API_IMPORT_URL', 'http://api:8001/api/v1/import-jobs/'
+)
+DATAHUB_API_TIMEOUT = int(os.environ.get('DATAHUB_API_TIMEOUT', '30'))
 EXTERNAL_IMPORT_BUCKETS = [
     bucket.strip()
     for bucket in os.environ.get('EXTERNAL_IMPORT_BUCKETS', '').split(',')
@@ -89,6 +93,7 @@ INSTALLED_APPS = [
     'account.apps.AccountConfig',
     'dataset.apps.DatasetConfig',
     'marketplace.apps.MarketplaceConfig',
+    'dashboard.apps.DashboardConfig',
     'djangoaddicts.pygwalker',
     'django_social_share',
     'taggit',

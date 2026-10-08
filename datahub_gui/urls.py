@@ -10,6 +10,7 @@ urlpatterns = [
     path('account/', include('account.urls', namespace='account')),
     path('dataset/', include('dataset.urls', namespace='dataset')),
     path('marketplace/', include('marketplace.urls', namespace='marketplace')),
+    path('admin-dashboard/', include('dashboard.urls', namespace='dashboard')),
     path('i18n/', include('django.conf.urls.i18n')),
 
     path("pygwalker/", include("djangoaddicts.pygwalker.urls"), ),

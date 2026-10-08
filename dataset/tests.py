@@ -21,6 +21,7 @@ from .models import (
     Dataset,
     DatasetAsset,
     DatasetVersion,
+    ExternalImportReceipt,
     PipelineDefinition,
     PipelineRun,
     PipelineStepRun,
@@ -29,6 +30,7 @@ from .models import (
     UploadPart,
     UploadSession,
 )
+from .external_imports import accept_external_import
 from .pipeline import (
     QualityGateError,
     _archive_member_metrics,
@@ -84,6 +86,49 @@ class DatasetAccessPolicyTests(TestCase):
             responseType='Accept',
         )
         self.assertTrue(can_access_dataset(self.buyer, self.requested_dataset))
+
+
+class ExternalImportMetadataTests(TestCase):
+    @patch('dataset.external_imports.enqueue_pipeline')
+    @patch('dataset.external_imports._verify_object_size')
+    @override_settings(EXTERNAL_IMPORT_BUCKETS=['datahub-quarantine'])
+    def test_kaggle_card_description_and_tags_are_stored(self, verify_size, enqueue):
+        owner = User.objects.create_user('kaggle-owner')
+        request_key = 'kaggle-card-test'
+        prefix = f"external-imports/kaggle/{hashlib.sha256(request_key.encode()).hexdigest()}/"
+        payload = {
+            'request_key': request_key,
+            'provider': 'kaggle',
+            'external_dataset_id': 'imtkaggleteam/mental-health',
+            'owner_user_id': owner.pk,
+            'metadata': {
+                'name': 'Mental Health Dataset',
+                'owner': 'imtkaggleteam',
+                'description': 'About Dataset\nThis is the Kaggle card description.',
+                'license': 'CC BY-NC-SA 4.0',
+                'tags': ['health', 'NLP'],
+                'reference_url': 'https://www.kaggle.com/datasets/imtkaggleteam/mental-health',
+            },
+            'assets': [{
+                'bucket': 'datahub-quarantine',
+                'object_key': f'{prefix}data.csv',
+                'original_name': 'data.csv',
+                'byte_size': 12,
+                'sha256': 'a' * 64,
+                'media_type': 'text/csv',
+            }],
+        }
+
+        receipt, created = accept_external_import(payload)
+
+        self.assertTrue(created)
+        self.assertIsInstance(receipt, ExternalImportReceipt)
+        dataset = receipt.dataset
+        self.assertEqual(dataset.desc, payload['metadata']['description'])
+        self.assertEqual(dataset.dataset_tags, 'health, NLP')
+        self.assertEqual(set(dataset.tags.names()), {'health', 'NLP'})
+        verify_size.assert_called_once()
+        enqueue.assert_called_once()
 
 
 class PipelineLifecycleTests(TestCase):

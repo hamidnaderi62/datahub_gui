@@ -48,17 +48,59 @@ services:
       S3_REGION: ${S3_REGION:-us-east-1}
       S3_VERIFY_SSL: ${S3_VERIFY_SSL:-true}
       IMPORT_QUARANTINE_BUCKET: ${IMPORT_QUARANTINE_BUCKET:-datahub-quarantine}
-      IMPORT_MAX_FILES: ${IMPORT_MAX_FILES:-20}
+      IMPORT_MAX_FILES: ${IMPORT_MAX_FILES:-100}
       IMPORT_MAX_BYTES: ${IMPORT_MAX_BYTES:-10737418240}
       GUI_IMPORT_HMAC_SECRET: ${EXTERNAL_IMPORT_HMAC_SECRET:-}
       GUI_IMPORT_URL: http://gui:8000/dataset/api/v1/external-imports
       KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
       KAGGLE_KEY: ${KAGGLE_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
     ports:
       - "8001:8001"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - datahub-network
+
+  api-worker:
+    build:
+      context: ../datahub_api
+      dockerfile: Dockerfile
+    command: sh /usr/local/bin/process_api_import_jobs.sh
+    volumes:
+      - ./scripts/process_api_import_jobs.sh:/usr/local/bin/process_api_import_jobs.sh:ro
+    environment:
+      DJANGO_SETTINGS_MODULE: datahub_api.settings
+      SECRET_KEY: ${API_SECRET_KEY:-${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY must be set}}
+      DEBUG: ${DJANGO_DEBUG:-false}
+      ALLOWED_HOSTS: ${API_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+      DATABASE_ENGINE: ${DATABASE_ENGINE:-django.db.backends.postgresql}
+      DATABASE_NAME: ${DATABASE_NAME:-datahub}
+      DATABASE_USER: ${DATABASE_USER:-datahub}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD must be set}
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_VERIFY_SSL: ${S3_VERIFY_SSL:-true}
+      IMPORT_QUARANTINE_BUCKET: ${IMPORT_QUARANTINE_BUCKET:-datahub-quarantine}
+      IMPORT_MAX_FILES: ${IMPORT_MAX_FILES:-100}
+      IMPORT_MAX_BYTES: ${IMPORT_MAX_BYTES:-10737418240}
+      GUI_IMPORT_HMAC_SECRET: ${EXTERNAL_IMPORT_HMAC_SECRET:-}
+      GUI_IMPORT_URL: http://gui:8000/dataset/api/v1/external-imports
+      KAGGLE_USERNAME: ${KAGGLE_USERNAME:-}
+      KAGGLE_KEY: ${KAGGLE_KEY:-}
+      HF_TOKEN: ${HF_TOKEN:-}
+      IMPORT_WORKER_POLL_INTERVAL: ${IMPORT_WORKER_POLL_INTERVAL:-5}
+    depends_on:
+      db:
+        condition: service_healthy
+      gui:
+        condition: service_started
+    restart: unless-stopped
     networks:
       - datahub-network
 
@@ -97,6 +139,8 @@ services:
       DIRECT_S3_UPLOAD_FALLBACK: ${DIRECT_S3_UPLOAD_FALLBACK:-true}
       EXTERNAL_IMPORT_HMAC_SECRET: ${EXTERNAL_IMPORT_HMAC_SECRET:-}
       EXTERNAL_IMPORT_BUCKETS: ${EXTERNAL_IMPORT_BUCKETS:-}
+      DATAHUB_API_IMPORT_URL: ${DATAHUB_API_IMPORT_URL:-http://api:8001/api/v1/import-jobs/}
+      DATAHUB_API_TIMEOUT: ${DATAHUB_API_TIMEOUT:-30}
     ports:
       - "8000:8000"
     depends_on:

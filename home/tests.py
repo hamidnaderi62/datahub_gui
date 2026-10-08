@@ -30,4 +30,15 @@ class HomePageTests(TestCase):
             self.assertContains(response, 'How it works')
             self.assertContains(response, 'Integrations')
             self.assertContains(response, 'Get started')
+            self.assertContains(response, 'A World of Data Without Borders')
+            self.assertContains(response, 'A data repository for storing, exchanging, and sharing datasets, built for AI professionals.')
             self.assertContains(response, 'Frequently asked questions')
+
+    def test_home_page_uses_localized_arabic_hero_copy(self):
+        self.client.cookies['datahub_language'] = 'ar'
+        with override('ar'):
+            response = self.client.get(reverse('home:home'))
+
+            self.assertEqual(response.status_code, 200)
+            self.assertContains(response, 'عالم البيانات بلا حدود')
+            self.assertContains(response, 'مستودع لتخزين مجموعات البيانات وتبادلها ومشاركتها، مخصص لمتخصصي الذكاء الاصطناعي.')
